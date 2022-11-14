@@ -53,13 +53,16 @@ MonoBehaviour:
   _activateAction: {fileID: 0}
   _toggleAction: {fileID: 0}
   _initialMode: 1
-  _hotkeys: ABCDEFGHIJKLMNOPQRSTUVWXYZ
+  _hotkeys: ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
   _excludedHotkeys: WASD
   _bindToObject: {fileID: 0}
   _itemParent: {fileID: 4612278478906631741}
-  _buttonPrefab: {fileID: 4793141439109349966, guid: ae700cd7f96374d6a8dc750b6a2b5450, type: 3}
-  _sliderPrefab: {fileID: 7772384783155456193, guid: 6e1fd040aa7214328b1c53cbc8b30f03, type: 3}
-  _togglePrefab: {fileID: 5697886135723687716, guid: 87ed58636f5cd4988bc6c7fdad265627, type: 3}
+  _buttonPrefab: {fileID: 4793141439109349966, guid: ae700cd7f96374d6a8dc750b6a2b5450,
+    type: 3}
+  _sliderPrefab: {fileID: 7772384783155456193, guid: 6e1fd040aa7214328b1c53cbc8b30f03,
+    type: 3}
+  _togglePrefab: {fileID: 5697886135723687716, guid: 87ed58636f5cd4988bc6c7fdad265627,
+    type: 3}
 --- !u!1 &4612278478906631742
 GameObject:
   m_ObjectHideFlags: 0
@@ -160,12 +163,12 @@ MonoBehaviour:
   m_Padding:
     m_Left: 4
     m_Right: 4
-    m_Top: 4
-    m_Bottom: 4
+    m_Top: 50
+    m_Bottom: 200
   m_ChildAlignment: 2
-  m_StartCorner: 0
+  m_StartCorner: 1
   m_StartAxis: 1
-  m_CellSize: {x: 300, y: 46}
+  m_CellSize: {x: 400, y: 46}
   m_Spacing: {x: 4, y: 4}
   m_Constraint: 0
   m_ConstraintCount: 2
@@ -185,4 +188,4 @@ MonoBehaviour:
   m_BlockingObjects: 0
   m_BlockingMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 4194295

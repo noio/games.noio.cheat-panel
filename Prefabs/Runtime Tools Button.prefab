@@ -145,7 +145,8 @@ MonoBehaviour:
   m_text: Label
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 23f0b3b8508034860a9bf6d55d94e7c6, type: 2}
-  m_sharedMaterial: {fileID: 9074640540456712300, guid: 23f0b3b8508034860a9bf6d55d94e7c6, type: 2}
+  m_sharedMaterial: {fileID: 9074640540456712300, guid: 23f0b3b8508034860a9bf6d55d94e7c6,
+    type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -287,7 +288,7 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 0.7, g: 0.7, b: 0.7, a: 1}
+    m_NormalColor: {r: 0.75, g: 0.75, b: 0.75, a: 1}
     m_HighlightedColor: {r: 1, g: 1, b: 1, a: 1}
     m_PressedColor: {r: 0.9, g: 0.9, b: 0.9, a: 1}
     m_SelectedColor: {r: 1, g: 1, b: 1, a: 1}

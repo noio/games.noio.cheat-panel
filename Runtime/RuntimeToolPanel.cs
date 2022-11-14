@@ -4,11 +4,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using noio.RuntimeTools.Attributes;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Composites;
-using Object = UnityEngine.Object;
 
 namespace noio.RuntimeTools
 {
@@ -25,11 +24,10 @@ namespace noio.RuntimeTools
         [SerializeField]
         InputActionReference _toggleAction;
 
-        Canvas _canvas;
         [SerializeField] Mode _initialMode = Mode.Invisible;
         [SerializeField] string _hotkeys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
         [SerializeField] string _excludedHotkeys = "WASD";
-        [SerializeField] Object _bindToObject;
+        [SerializeField] GameObject _bindToObject;
 
         [Header("Internal")] //
         [SerializeField]
@@ -41,6 +39,7 @@ namespace noio.RuntimeTools
 
         #endregion
 
+        Canvas _canvas;
         List<RuntimeToolItem> _items;
         int _lastExecutedOncePerFrameAction;
         bool _isQuitting;
@@ -51,7 +50,13 @@ namespace noio.RuntimeTools
         void Awake()
         {
             _isQuitting = false;
-            Application.quitting += () => _isQuitting = true;
+            Application.quitting -= HandleApplicationQuit;
+            Application.quitting += HandleApplicationQuit;
+
+#if UNITY_EDITOR
+            EditorApplication.playModeStateChanged -= HandlePlayModeStateChanges;
+            EditorApplication.playModeStateChanged += HandlePlayModeStateChanges;
+#endif
 
             if (_activateAction != null && _activateAction.action != null)
             {
@@ -67,9 +72,10 @@ namespace noio.RuntimeTools
                 _toggleAction.action.performed += HandleToggle;
             }
 
-            _canvas = GetComponentInChildren<Canvas>(includeInactive:true);
+            _canvas = GetComponentInChildren<Canvas>(true);
 
             SetMode(_initialMode);
+            BuildUI();
         }
 
         void OnDestroy()
@@ -87,13 +93,6 @@ namespace noio.RuntimeTools
 
         void OnEnable()
         {
-            for (var i = _itemParent.childCount - 1; i >= 0; i--)
-            {
-                Destroy(_itemParent.GetChild(i).gameObject);
-            }
-
-            BuildUIForObject(_bindToObject as Component);
-
             Keyboard.current.onTextInput -= HandleTextInput;
             Keyboard.current.onTextInput += HandleTextInput;
         }
@@ -105,11 +104,50 @@ namespace noio.RuntimeTools
 
         #endregion
 
-        void BuildUIForObject(Component component)
+#if UNITY_EDITOR
+
+        #region EDITOR
+
+        void HandlePlayModeStateChanges(PlayModeStateChange playModeStateChange)
+        {
+            if (playModeStateChange == PlayModeStateChange.ExitingPlayMode)
+            {
+                EditorApplication.playModeStateChanged -= HandlePlayModeStateChanges;
+                HandleApplicationQuit();
+            }
+        }
+
+        #endregion
+
+#endif
+
+        void HandleApplicationQuit()
+        {
+            Application.quitting -= HandleApplicationQuit;
+            _isQuitting = true;
+        }
+
+        void BuildUI()
+        {
+            for (var i = _itemParent.childCount - 1; i >= 0; i--)
+            {
+                Destroy(_itemParent.GetChild(i).gameObject);
+            }
+
+            _items = new List<RuntimeToolItem>();
+
+            foreach (var component in _bindToObject.GetComponents<Component>())
+            {
+                AddUIForObject(component);
+            }
+
+            AssignHotkeys();
+        }
+
+        void AddUIForObject(Component component)
         {
             var type = component.GetType();
 
-            _items = new List<RuntimeToolItem>();
             foreach (var member in type.GetMembers())
             {
                 if (member.GetCustomAttribute(typeof(RuntimeButtonAttribute), false) is
@@ -136,7 +174,7 @@ namespace noio.RuntimeTools
                     else
                     {
                         Debug.LogWarning($"{type.Name}.{member.Name} has [RuntimeSlider] attribute " +
-                                         $"but it's not a float or int property");
+                                         "but it's not a float or int property");
                     }
                 }
 
@@ -151,12 +189,10 @@ namespace noio.RuntimeTools
                     else
                     {
                         Debug.LogWarning($"{type.Name}.{member.Name} has [RuntimeSlider] attribute " +
-                                         $"but it's not a float or int property");
+                                         "but it's not a float or int property");
                     }
                 }
             }
-
-            AssignHotkeys();
         }
 
         T InstantiateItem<T>(
@@ -165,16 +201,25 @@ namespace noio.RuntimeTools
             RuntimeToolAttribute attribute) where T : RuntimeToolItem
         {
             var item = Instantiate(prefab, _itemParent);
-            item.Title = NicifyVariableName(member.Name);
+
+            item.Title = string.IsNullOrEmpty(attribute.Title)
+                ? NicifyVariableName(member.Name)
+                : attribute.Title;
+
             item.PreferredHotkeys = attribute.PreferredHotkeys;
+            item.name = item.Title;
             _items.Add(item);
             return item;
         }
 
         void AssignHotkeys()
         {
-            var usedHotkeys = "";
-            foreach (var item in _items)
+            var occupiedHotkeys = "";
+            /*
+             * Start with those items that have set a Preferred Hotkey.
+             */
+            var orderedItems = _items.OrderBy(item => string.IsNullOrEmpty(item.PreferredHotkeys));
+            foreach (var item in orderedItems)
             {
                 var title = item.Title.ToUpper();
 
@@ -183,11 +228,11 @@ namespace noio.RuntimeTools
                 var foundBinding = possibleBindings.FirstOrDefault(
                     c => _hotkeys.Contains(c) &&
                          _excludedHotkeys.Contains(c) == false &&
-                         usedHotkeys.Contains(c) == false);
+                         occupiedHotkeys.Contains(c) == false);
 
                 if (foundBinding != default)
                 {
-                    usedHotkeys += foundBinding;
+                    occupiedHotkeys += foundBinding;
                     item.Hotkey = foundBinding.ToString()[0];
                 }
             }
@@ -279,14 +324,16 @@ namespace noio.RuntimeTools
 
         void SelectFirstButton()
         {
-            EventSystem.current.SetSelectedGameObject(_items[0].gameObject);
+            if (_items.Count > 0)
+            {
+                EventSystem.current.SetSelectedGameObject(_items[0].gameObject);
+            }
         }
 
         #region EVENT HANDLERS
 
         void HandleTextInput(char inputChar)
         {
-            // Debug.Log($"F{Time.frameCount} Got text input {inputChar}");
             /*
              * Don't do debug actions in frame one because that could be from CMD+P (play)
              */
@@ -298,6 +345,7 @@ namespace noio.RuntimeTools
                 var item = _items.FirstOrDefault(a => a.Hotkey == char.ToUpper(inputChar));
                 if (item != null)
                 {
+                    Debug.Log($"F{Time.frameCount} Run Hotkey \"{char.ToUpper(inputChar)}\": {item.Title}");
                     item.OnHotkeyUsed(Keyboard.current.shiftKey.isPressed);
                 }
             }

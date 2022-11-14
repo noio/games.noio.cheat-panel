@@ -8,7 +8,7 @@ namespace noio.RuntimeTools.Attributes
     [AttributeUsage(AttributeTargets.Property)]
     public class RuntimeToggleAttribute : RuntimeToolAttribute
     {
-        public RuntimeToggleAttribute(string preferredHotkeys = "") : base(preferredHotkeys)
+        public RuntimeToggleAttribute(string preferredHotkeys = "", string title ="") : base(preferredHotkeys, title)
         {
         }
     }
