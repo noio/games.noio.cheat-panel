@@ -1,0 +1,24 @@
+{
+    "name": "games.noio.runtime-tools",
+    "version": "0.1.0",
+    "displayName": "Runtime Tools",
+    "description": "Quickly create a runtime (debug) UI to let you toggle settings or call methods (like cheats).",
+    "unity": "2019.1",
+    "unityRelease": "0b5",
+    "dependencies": {
+        "com.unity.inputsystem": "1.4.1",
+        "com.unity.textmeshpro": "3.0.6"
+    },
+    "keywords": [
+        "Build"
+    ],
+    "author": {
+        "name": "Thomas van den Berg",
+        "email": "thomas@noio.nl",
+        "url": "https://noio.games"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/noio/games.noio.runtime-tools.git"
+    }
+}
