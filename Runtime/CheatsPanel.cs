@@ -27,7 +27,8 @@ namespace noio.CheatPanel
         [SerializeField] Mode _initialMode = Mode.Invisible;
         [SerializeField] string _hotkeys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
         [SerializeField] string _excludedHotkeys = "WASD";
-        [SerializeField] GameObject _bindToObject;
+
+        [SerializeField] GameObject[] _bindToObjects;
 
         [Header("Internal")] //
         [SerializeField]
@@ -136,9 +137,12 @@ namespace noio.CheatPanel
 
             _items = new List<CheatItem>();
 
-            foreach (var component in _bindToObject.GetComponents<Component>())
+            foreach (var go in _bindToObjects)
             {
-                AddUIForObject(component);
+                foreach (var component in go.GetComponents<Component>())
+                {
+                    AddUIForObject(component);
+                }
             }
 
             AssignHotkeys();
@@ -207,6 +211,8 @@ namespace noio.CheatPanel
                 : attribute.Title;
 
             item.PreferredHotkeys = attribute.PreferredHotkeys;
+            // item.HueTint = (member.DeclaringType.Name.GetHashCode() / (float)int.MaxValue) * .5f + .5f;
+
             item.name = item.Title;
             _items.Add(item);
             return item;

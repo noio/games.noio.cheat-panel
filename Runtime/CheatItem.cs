@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace noio.CheatPanel
 {
@@ -39,6 +40,21 @@ namespace noio.CheatPanel
             {
                 _hotkey = char.ToUpper(value);
                 SetLabel();
+            }
+        }
+
+        public float HueTint
+        {
+            set
+            {
+                var selectable = GetComponent<Selectable>();
+                var colorBlock = selectable.colors;
+                var color = Color.HSVToRGB(value, .3f, 1);
+                colorBlock.normalColor *= color;
+                colorBlock.highlightedColor *= color;
+                colorBlock.selectedColor *= color;
+                colorBlock.disabledColor *= color;
+                selectable.colors = colorBlock;
             }
         }
 
