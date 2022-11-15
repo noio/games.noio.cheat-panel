@@ -26,7 +26,7 @@ namespace noio.RuntimeTools
             set
             {
                 _property.SetValue(_targetObject, value);
-                _valueLabel.text = PropertyValue ? "[x]" : "[ ]";
+                SetValueLabel();
             }
         }
 
@@ -47,7 +47,12 @@ namespace noio.RuntimeTools
             _targetObject = targetObject;
             _property = property;
 
-            _valueLabel.text = PropertyValue ? "[x]" : "[ ]";
+            SetValueLabel();
+        }
+
+        void SetValueLabel()
+        {
+            _valueLabel.text = PropertyValue ? "ON" : "OFF";
         }
 
         protected override void Execute()

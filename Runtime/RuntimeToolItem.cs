@@ -82,7 +82,11 @@ namespace noio.RuntimeTools
         void SetLabel()
         {
             string label;
-            if (Title.Contains(Hotkey, StringComparison.CurrentCultureIgnoreCase))
+            if (Hotkey == default)
+            {
+                label = Title;
+            }
+            else if (Title.Contains(Hotkey, StringComparison.CurrentCultureIgnoreCase))
             {
                 var rx = new Regex($"({Hotkey})", RegexOptions.IgnoreCase);
                 // label = rx.Replace(Title, "<b><u>$1</u></b>", 1);

@@ -244,7 +244,7 @@ namespace noio.RuntimeTools
             var inputArray = input.ToCharArray();
             var startIndex = 0;
 
-            if (inputArray.Length > 1 && inputArray[0] == 'm' && input[1] == '_')
+            if (inputArray.Length > 1 && inputArray[0] == 'm' && inputArray[1] == '_')
             {
                 startIndex += 2;
             }
@@ -254,25 +254,27 @@ namespace noio.RuntimeTools
                 startIndex += 1;
             }
 
-            if (inputArray.Length > 0 && inputArray[0] >= 'a' && inputArray[0] <= 'z')
+            if (inputArray.Length > 0 && char.IsLower(inputArray[0]))
             {
-                inputArray[0] -= (char)('a' - 'A');
+                inputArray[0] = char.ToUpper(inputArray[0]);
             }
 
+            char prevChar = default;
             for (var i = startIndex; i < inputArray.Length; ++i)
             {
-                if (inputArray[i] == '_')
+                var nextChar = inputArray[i];
+                switch (nextChar)
                 {
-                    output.Append(' ');
-                    continue;
+                    case '_':
+                        output.Append(' ');
+                        continue;
+                    case >= 'A' and <= 'Z' when prevChar is < 'A' or > 'Z':
+                        output.Append(' ');
+                        break;
                 }
 
-                if (inputArray[i] >= 'A' && inputArray[i] <= 'Z')
-                {
-                    output.Append(' ');
-                }
-
-                output.Append(inputArray[i]);
+                output.Append(nextChar);
+                prevChar = nextChar;
             }
 
             return output.ToString().TrimStart(' ');
