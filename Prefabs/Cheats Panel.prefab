@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4612278477020558465}
   - component: {fileID: 4612278477020558466}
   m_Layer: 0
-  m_Name: Runtime Tools
+  m_Name: Cheats Panel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -47,13 +47,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 4612278477020558494}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 87b4f77b702614f5e8225376a3cff4f2, type: 3}
+  m_Script: {fileID: 11500000, guid: 4254718a6ffee4077abf5ef5222ae4aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   _activateAction: {fileID: 0}
   _toggleAction: {fileID: 0}
   _initialMode: 1
-  _hotkeys: ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
+  _hotkeys: ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890
   _excludedHotkeys: WASD
   _bindToObject: {fileID: 0}
   _itemParent: {fileID: 4612278478906631741}
