@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using noio.RuntimeTools.Attributes;
+using noio.CheatPanel.Attributes;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
-namespace noio.RuntimeTools
+namespace noio.CheatPanel
 {
-    public class RuntimeToolPanel : MonoBehaviour
+    public class CheatsPanel : MonoBehaviour
     {
         #region PUBLIC AND SERIALIZED FIELDS
 
@@ -33,14 +33,14 @@ namespace noio.RuntimeTools
         [SerializeField]
         RectTransform _itemParent;
 
-        [SerializeField] RuntimeButton _buttonPrefab;
-        [SerializeField] RuntimeSlider _sliderPrefab;
-        [SerializeField] RuntimeToggle _togglePrefab;
+        [SerializeField] CheatButton _buttonPrefab;
+        [SerializeField] CheatSlider _sliderPrefab;
+        [SerializeField] CheatToggle _togglePrefab;
 
         #endregion
 
         Canvas _canvas;
-        List<RuntimeToolItem> _items;
+        List<CheatItem> _items;
         int _lastExecutedOncePerFrameAction;
         bool _isQuitting;
         Mode _mode;
@@ -134,7 +134,7 @@ namespace noio.RuntimeTools
                 Destroy(_itemParent.GetChild(i).gameObject);
             }
 
-            _items = new List<RuntimeToolItem>();
+            _items = new List<CheatItem>();
 
             foreach (var component in _bindToObject.GetComponents<Component>())
             {
@@ -150,8 +150,8 @@ namespace noio.RuntimeTools
 
             foreach (var member in type.GetMembers())
             {
-                if (member.GetCustomAttribute(typeof(RuntimeButtonAttribute), false) is
-                    RuntimeButtonAttribute attribute)
+                if (member.GetCustomAttribute(typeof(CheatButtonAttribute), false) is
+                    CheatButtonAttribute attribute)
                 {
                     if (member is MethodInfo method)
                     {
@@ -163,8 +163,8 @@ namespace noio.RuntimeTools
 
             foreach (var member in type.GetMembers())
             {
-                if (member.GetCustomAttribute(typeof(RuntimeSliderAttribute), false) is
-                    RuntimeSliderAttribute sliderAttribute)
+                if (member.GetCustomAttribute(typeof(CheatSliderAttribute), false) is
+                    CheatSliderAttribute sliderAttribute)
                 {
                     if (member is PropertyInfo property)
                     {
@@ -178,8 +178,8 @@ namespace noio.RuntimeTools
                     }
                 }
 
-                if (member.GetCustomAttribute(typeof(RuntimeToggleAttribute), false) is
-                    RuntimeToggleAttribute toggleAttribute)
+                if (member.GetCustomAttribute(typeof(CheatToggleAttribute), false) is
+                    CheatToggleAttribute toggleAttribute)
                 {
                     if (member is PropertyInfo property)
                     {
@@ -198,7 +198,7 @@ namespace noio.RuntimeTools
         T InstantiateItem<T>(
             T                    prefab,
             MemberInfo           member,
-            RuntimeToolAttribute attribute) where T : RuntimeToolItem
+            CheatItemAttribute attribute) where T : CheatItem
         {
             var item = Instantiate(prefab, _itemParent);
 

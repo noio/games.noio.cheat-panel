@@ -1,14 +1,14 @@
 using System;
 
-namespace noio.RuntimeTools.Attributes
+namespace noio.CheatPanel.Attributes
 {
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    public class RuntimeSliderAttribute : RuntimeToolAttribute
+    public class CheatSliderAttribute : CheatItemAttribute
     {
         public float Min { get; }
         public float Max { get; }
 
-        public RuntimeSliderAttribute(float min, float max, string preferredHotkeys = "", string title = "") :
+        public CheatSliderAttribute(float min, float max, string preferredHotkeys = "", string title = "") :
             base(preferredHotkeys, title)
         {
             Min = min;

@@ -3,9 +3,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace noio.RuntimeTools
+namespace noio.CheatPanel
 {
-    internal class RuntimeSlider : RuntimeToolItem
+    internal class CheatSlider : CheatItem
     {
         #region PUBLIC AND SERIALIZED FIELDS
 

@@ -2,9 +2,9 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace noio.RuntimeTools
+namespace noio.CheatPanel
 {
-    internal class RuntimeButton : RuntimeToolItem
+    internal class CheatButton : CheatItem
     {
         Button _button;
         Object _targetObject;

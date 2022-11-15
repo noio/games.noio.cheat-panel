@@ -1,13 +1,13 @@
 using System;
 
-namespace noio.RuntimeTools.Attributes
+namespace noio.CheatPanel.Attributes
 {
-    public abstract class RuntimeToolAttribute : Attribute
+    public abstract class CheatItemAttribute : Attribute
     {
         public string PreferredHotkeys { get; }
         public string Title { get; }
 
-        public RuntimeToolAttribute(string preferredHotkeys = "", string title = "")
+        public CheatItemAttribute(string preferredHotkeys = "", string title = "")
         {
             PreferredHotkeys = preferredHotkeys;
             Title = title;

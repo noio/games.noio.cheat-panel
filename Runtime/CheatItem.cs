@@ -4,9 +4,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace noio.RuntimeTools
+namespace noio.CheatPanel
 {
-    public abstract class RuntimeToolItem : MonoBehaviour,
+    public abstract class CheatItem : MonoBehaviour,
         IPointerClickHandler, ISubmitHandler, ISelectHandler, ICancelHandler
     {
         #region PUBLIC AND SERIALIZED FIELDS

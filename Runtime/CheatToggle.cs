@@ -3,9 +3,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace noio.RuntimeTools
+namespace noio.CheatPanel
 {
-    internal class RuntimeToggle : RuntimeToolItem
+    internal class CheatToggle : CheatItem
     {
         #region PUBLIC AND SERIALIZED FIELDS
 
