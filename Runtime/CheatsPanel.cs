@@ -4,15 +4,19 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using noio.CheatPanel.Attributes;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace noio.CheatPanel
 {
     public class CheatsPanel : MonoBehaviour
     {
+        static CheatsPanel _instance;
+
         #region PUBLIC AND SERIALIZED FIELDS
 
         [Tooltip("The action that activates the debug panel for the first time.")]
@@ -27,24 +31,35 @@ namespace noio.CheatPanel
         [SerializeField] Mode _initialMode = Mode.Invisible;
         [SerializeField] string _hotkeys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
         [SerializeField] string _excludedHotkeys = "WASD";
-
         [SerializeField] GameObject[] _bindToObjects;
 
         [Header("Internal")] //
         [SerializeField]
-        RectTransform _itemParent;
+        RectTransform _contentParent;
 
         [SerializeField] CheatButton _buttonPrefab;
         [SerializeField] CheatSlider _sliderPrefab;
         [SerializeField] CheatToggle _togglePrefab;
+        [SerializeField] CheatCategory _categoryPrefab;
 
         #endregion
 
         Canvas _canvas;
+        /*
+         * Build Fields:
+         */
         List<CheatItem> _items;
+        Component _buildingForComponent;
+        CheatCategory _currentCategory;
+
+        /*
+         * Runtime Fields
+         */
         int _lastExecutedOncePerFrameAction;
         bool _isQuitting;
         Mode _mode;
+        bool _originalCursorVisible;
+        CursorLockMode _originalCursorLockState;
 
         #region MONOBEHAVIOUR METHODS
 
@@ -53,6 +68,8 @@ namespace noio.CheatPanel
             _isQuitting = false;
             Application.quitting -= HandleApplicationQuit;
             Application.quitting += HandleApplicationQuit;
+
+            _instance = this;
 
 #if UNITY_EDITOR
             EditorApplication.playModeStateChanged -= HandlePlayModeStateChanges;
@@ -75,6 +92,8 @@ namespace noio.CheatPanel
 
             _canvas = GetComponentInChildren<Canvas>(true);
 
+            _originalCursorVisible = Cursor.visible;
+            _originalCursorLockState = Cursor.lockState;
             SetMode(_initialMode);
             BuildUI();
         }
@@ -105,6 +124,14 @@ namespace noio.CheatPanel
 
         #endregion
 
+        public static void Hide()
+        {
+            if (_instance && _instance._mode == Mode.Enabled)
+            {
+                _instance.SetMode(Mode.Invisible);
+            }
+        }
+
 #if UNITY_EDITOR
 
         #region EDITOR
@@ -130,9 +157,9 @@ namespace noio.CheatPanel
 
         void BuildUI()
         {
-            for (var i = _itemParent.childCount - 1; i >= 0; i--)
+            for (var i = _contentParent.childCount - 1; i >= 0; i--)
             {
-                Destroy(_itemParent.GetChild(i).gameObject);
+                Destroy(_contentParent.GetChild(i).gameObject);
             }
 
             _items = new List<CheatItem>();
@@ -150,6 +177,9 @@ namespace noio.CheatPanel
 
         void AddUIForObject(Component component)
         {
+            _buildingForComponent = component;
+            _currentCategory = null;
+
             var type = component.GetType();
 
             foreach (var member in type.GetMembers())
@@ -197,20 +227,35 @@ namespace noio.CheatPanel
                     }
                 }
             }
+            
         }
 
-        T InstantiateItem<T>(
-            T                    prefab,
-            MemberInfo           member,
+        CheatCategory InstantiateCategory(string title)
+        {
+            var category = Instantiate(_categoryPrefab, _contentParent);
+            category.Title = title;
+
+            return category;
+        }
+
+        T InstantiateItem<T>(T prefab,
+            MemberInfo         member,
             CheatItemAttribute attribute) where T : CheatItem
         {
-            var item = Instantiate(prefab, _itemParent);
+
+            if (_currentCategory == null)
+            {
+                _currentCategory = InstantiateCategory(NicifyVariableName(_buildingForComponent.name));
+            }
+            
+            var item = Instantiate(prefab, _currentCategory.ContentParent);
 
             item.Title = string.IsNullOrEmpty(attribute.Title)
                 ? NicifyVariableName(member.Name)
                 : attribute.Title;
 
             item.PreferredHotkeys = attribute.PreferredHotkeys;
+
             // item.HueTint = (member.DeclaringType.Name.GetHashCode() / (float)int.MaxValue) * .5f + .5f;
 
             item.name = item.Title;
@@ -308,16 +353,25 @@ namespace noio.CheatPanel
                 switch (newMode)
                 {
                     case Mode.Disabled:
+                        Cursor.visible = _originalCursorVisible;
+                        Cursor.lockState = _originalCursorLockState;
                         gameObject.SetActive(false);
                         break;
 
                     case Mode.Enabled:
+                        _originalCursorVisible = Cursor.visible;
+                        _originalCursorLockState = Cursor.lockState;
+                        Cursor.visible = true;
+                        Cursor.lockState = CursorLockMode.None;
+
                         _canvas.gameObject.SetActive(true);
                         gameObject.SetActive(true);
                         SelectFirstButton();
                         break;
 
                     case Mode.Invisible:
+                        Cursor.visible = _originalCursorVisible;
+                        Cursor.lockState = _originalCursorLockState;
                         gameObject.SetActive(true);
                         _canvas.gameObject.SetActive(false);
                         break;

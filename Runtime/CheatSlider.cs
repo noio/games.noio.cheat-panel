@@ -34,16 +34,23 @@ namespace noio.CheatPanel
 
         public void Init(Object targetObject, PropertyInfo property, float min, float max)
         {
+            _targetObject = targetObject;
+            _property = property;
+            /*
+             * Store default value because sometimes
+             * property is already changed
+             * by setting min/max
+             */
+            var defaultPropertyValue = PropertyValue;
+            
+            _slider.minValue = min;
+            _slider.maxValue = max;
+            _slider.SetValueWithoutNotify(defaultPropertyValue);
+
             _slider.onValueChanged.RemoveAllListeners();
             _slider.onValueChanged.AddListener(v => PropertyValue = v);
 
-            _targetObject = targetObject;
-            _property = property;
-            _slider.minValue = min;
-            _slider.maxValue = max;
-            _slider.SetValueWithoutNotify(PropertyValue);
-
-            _valueLabel.SetText("{0:0.00}", PropertyValue);
+            _valueLabel.SetText("{0:0.00}", defaultPropertyValue);
         }
 
         protected override void Execute()
