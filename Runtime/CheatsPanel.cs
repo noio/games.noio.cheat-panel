@@ -4,12 +4,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using noio.CheatPanel.Attributes;
-using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
-using UnityEngine.UI;
 
 namespace noio.CheatPanel
 {
@@ -45,6 +43,7 @@ namespace noio.CheatPanel
         #endregion
 
         Canvas _canvas;
+
         /*
          * Build Fields:
          */
@@ -95,7 +94,6 @@ namespace noio.CheatPanel
             _originalCursorVisible = Cursor.visible;
             _originalCursorLockState = Cursor.lockState;
             SetMode(_initialMode);
-            BuildUI();
         }
 
         void OnDestroy()
@@ -109,6 +107,11 @@ namespace noio.CheatPanel
             {
                 _toggleAction.action.performed -= HandleToggle;
             }
+        }
+
+        void Start()
+        {
+            BuildUI();
         }
 
         void OnEnable()
@@ -227,7 +230,6 @@ namespace noio.CheatPanel
                     }
                 }
             }
-            
         }
 
         CheatCategory InstantiateCategory(string title)
@@ -242,12 +244,11 @@ namespace noio.CheatPanel
             MemberInfo         member,
             CheatItemAttribute attribute) where T : CheatItem
         {
-
             if (_currentCategory == null)
             {
                 _currentCategory = InstantiateCategory(NicifyVariableName(_buildingForComponent.name));
             }
-            
+
             var item = Instantiate(prefab, _currentCategory.ContentParent);
 
             item.Title = string.IsNullOrEmpty(attribute.Title)
