@@ -116,13 +116,19 @@ namespace noio.CheatPanel
 
         void OnEnable()
         {
-            Keyboard.current.onTextInput -= HandleTextInput;
-            Keyboard.current.onTextInput += HandleTextInput;
+            if (Keyboard.current != null)
+            {
+                Keyboard.current.onTextInput -= HandleTextInput;
+                Keyboard.current.onTextInput += HandleTextInput;
+            }
         }
 
         void OnDisable()
         {
-            Keyboard.current.onTextInput -= HandleTextInput;
+            if (Keyboard.current != null)
+            {
+                Keyboard.current.onTextInput -= HandleTextInput;
+            }
         }
 
         #endregion
