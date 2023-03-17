@@ -27,7 +27,8 @@ namespace noio.CheatPanel
         InputActionReference _toggleAction;
 
         [SerializeField] Mode _initialModeInEditor = Mode.Invisible;
-        [SerializeField] Mode _initialModeInBuild = Mode.PermanentlyRemoved;
+        [SerializeField] Mode _initialModeInDevelopmentBuild = Mode.Disabled;
+        [SerializeField] Mode _initialModeInReleaseBuild = Mode.PermanentlyRemoved;
         [SerializeField] string _hotkeys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
         [SerializeField] string _excludedHotkeys = "WASD";
         [SerializeField] GameObject[] _bindToObjects;
@@ -97,8 +98,10 @@ namespace noio.CheatPanel
 
 #if UNITY_EDITOR
             SetMode(_initialModeInEditor);
+#elif DEVELOPMENT_BUILD
+            SetMode(_initialModeInDevelopmentBuild);
 #else
-            SetMode(_initialModeInBuild);
+            SetMode(_initialModeInReleaseBuild);
 #endif
         }
 
