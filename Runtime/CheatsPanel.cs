@@ -27,7 +27,7 @@ namespace noio.CheatPanel
         InputActionReference _toggleAction;
 
         [SerializeField] Mode _initialModeInEditor = Mode.Invisible;
-        [SerializeField] Mode _initialModeInBuild = Mode.Removed;
+        [SerializeField] Mode _initialModeInBuild = Mode.PermanentlyRemoved;
         [SerializeField] string _hotkeys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
         [SerializeField] string _excludedHotkeys = "WASD";
         [SerializeField] GameObject[] _bindToObjects;
@@ -365,7 +365,10 @@ namespace noio.CheatPanel
             {
                 switch (newMode)
                 {
-                    case Mode.Removed:
+                    case Mode.PermanentlyRemoved:
+                        Destroy(gameObject);
+                        break;
+                    
                     case Mode.Disabled:
                         Cursor.visible = _originalCursorVisible;
                         Cursor.lockState = _originalCursorLockState;
@@ -455,11 +458,12 @@ namespace noio.CheatPanel
         #endregion
     }
 
-    internal enum Mode
+    public enum Mode
     {
-        Removed,
-        Disabled,
-        Invisible,
-        Enabled
+        NotSet = 0,
+        PermanentlyRemoved = 1,
+        Disabled = 2,
+        Invisible = 3,
+        Enabled = 4
     }
 }
