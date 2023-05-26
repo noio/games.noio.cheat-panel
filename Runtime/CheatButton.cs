@@ -1,12 +1,14 @@
+using System;
 using System.Reflection;
-using UnityEngine;
 using UnityEngine.UI;
+using Object = UnityEngine.Object;
 
 namespace noio.CheatPanel
 {
     internal class CheatButton : CheatItem
     {
         Button _button;
+        Action _action;
         Object _targetObject;
         MethodInfo _method;
 
@@ -20,15 +22,14 @@ namespace noio.CheatPanel
 
         #endregion
 
-        public void Init(Object targetObject, MethodInfo method)
+        public void Init(Action action)
         {
-            _targetObject = targetObject;
-            _method = method;
+            _action = action;
         }
 
         protected override void Execute()
         {
-            _method.Invoke(_targetObject, null);
+            _action.Invoke();
         }
 
         protected override void ExecuteAlt()

@@ -198,53 +198,76 @@ namespace noio.CheatPanel
             _buildingForComponent = component;
             _currentCategory = null;
 
+            
             var type = component.GetType();
 
             foreach (var member in type.GetMembers())
             {
+                /*
+                 * BUTTONS
+                 */
                 if (member.GetCustomAttribute(typeof(CheatButtonAttribute), false) is
                     CheatButtonAttribute attribute)
                 {
                     if (member is MethodInfo method)
                     {
-                        var button = InstantiateItem(_buttonPrefab, method, attribute);
-                        button.Init(component, method);
+                        attribute.Data.SetTitleIfEmpty(NicifyVariableName(member.Name));
+                        var button = InstantiateItem(_buttonPrefab, attribute.Data);
+                        button.Init(() => method.Invoke(component, null));
                     }
                 }
-            }
 
-            foreach (var member in type.GetMembers())
-            {
+                /*
+                 * SLIDERS
+                 */
                 if (member.GetCustomAttribute(typeof(CheatSliderAttribute), false) is
                     CheatSliderAttribute sliderAttribute)
                 {
                     if (member is PropertyInfo property)
                     {
-                        var slider = InstantiateItem(_sliderPrefab, property, sliderAttribute);
+                        sliderAttribute.Data.SetTitleIfEmpty(NicifyVariableName(member.Name));
+                        var slider = InstantiateItem(_sliderPrefab, sliderAttribute.Data);
                         slider.Init(component, property, sliderAttribute.Min, sliderAttribute.Max);
                     }
                     else
                     {
-                        Debug.LogWarning($"{type.Name}.{member.Name} has [RuntimeSlider] attribute " +
+                        Debug.LogWarning($"{type.Name}.{member.Name} has [CheatSlider] attribute " +
                                          "but it's not a float or int property");
                     }
                 }
 
+                /*
+                 * TOGGLES
+                 */
                 if (member.GetCustomAttribute(typeof(CheatToggleAttribute), false) is
                     CheatToggleAttribute toggleAttribute)
                 {
                     if (member is PropertyInfo property)
                     {
-                        var toggle = InstantiateItem(_togglePrefab, property, toggleAttribute);
+                        toggleAttribute.Data.SetTitleIfEmpty(NicifyVariableName(member.Name));
+                        var toggle = InstantiateItem(_togglePrefab, toggleAttribute.Data);
                         toggle.Init(component, property);
                     }
                     else
                     {
-                        Debug.LogWarning($"{type.Name}.{member.Name} has [RuntimeSlider] attribute " +
+                        Debug.LogWarning($"{type.Name}.{member.Name} has [CheatSlider] attribute " +
                                          "but it's not a float or int property");
                     }
                 }
             }
+
+            /*
+             * Spawn DYNAMIC BUTTONS (returned by the ICheatButtonProvider)
+             */
+            if (component is ICheatButtonProvider buttonProvider)
+            {
+                foreach (var (data, action) in buttonProvider.GetCheatButtons())
+                {
+                    var button = InstantiateItem(_buttonPrefab, data);
+                    button.Init(action);
+                }
+            }
+
         }
 
         CheatCategory InstantiateCategory(string title)
@@ -255,9 +278,7 @@ namespace noio.CheatPanel
             return category;
         }
 
-        T InstantiateItem<T>(T prefab,
-            MemberInfo         member,
-            CheatItemAttribute attribute) where T : CheatItem
+        T InstantiateItem<T>(T prefab, CheatItemData data) where T : CheatItem
         {
             if (_currentCategory == null)
             {
@@ -266,11 +287,8 @@ namespace noio.CheatPanel
 
             var item = Instantiate(prefab, _currentCategory.ContentParent);
 
-            item.Title = string.IsNullOrEmpty(attribute.Title)
-                ? NicifyVariableName(member.Name)
-                : attribute.Title;
-
-            item.PreferredHotkeys = attribute.PreferredHotkeys;
+            item.Title = data.Title;
+            item.PreferredHotkeys = data.PreferredHotkeys;
 
             // item.HueTint = (member.DeclaringType.Name.GetHashCode() / (float)int.MaxValue) * .5f + .5f;
 
@@ -371,7 +389,7 @@ namespace noio.CheatPanel
                     case Mode.PermanentlyRemoved:
                         Destroy(gameObject);
                         break;
-                    
+
                     case Mode.Disabled:
                         Cursor.visible = _originalCursorVisible;
                         Cursor.lockState = _originalCursorLockState;
