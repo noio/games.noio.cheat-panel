@@ -1,6 +1,6 @@
 {
     "name": "games.noio.cheat-panel",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "displayName": "Cheat Panel",
     "description": "Quickly create a runtime (debug) UI to let you toggle settings or call methods (like cheats).",
     "unity": "2019.1",
