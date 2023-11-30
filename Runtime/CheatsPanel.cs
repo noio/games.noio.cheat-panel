@@ -49,9 +49,8 @@ namespace noio.CheatPanel
         /*
          * Build Fields:
          */
-        List<CheatItem> _items;
-        Component _buildingForComponent;
-        CheatCategory _currentCategory;
+        readonly List<CheatItem> _items = new();
+        readonly List<CheatCategory> _categories = new();
 
         /*
          * Runtime Fields
@@ -180,7 +179,8 @@ namespace noio.CheatPanel
                 Destroy(_contentParent.GetChild(i).gameObject);
             }
 
-            _items = new List<CheatItem>();
+            _items.Clear();
+            _categories.Clear();
 
             foreach (var go in _bindToObjects)
             {
@@ -195,10 +195,6 @@ namespace noio.CheatPanel
 
         void AddUIForObject(Component component)
         {
-            _buildingForComponent = component;
-            _currentCategory = null;
-
-            
             var type = component.GetType();
 
             foreach (var member in type.GetMembers())
@@ -212,7 +208,7 @@ namespace noio.CheatPanel
                     if (member is MethodInfo method)
                     {
                         attribute.Data.SetTitleIfEmpty(NicifyVariableName(member.Name));
-                        var button = InstantiateItem(_buttonPrefab, attribute.Data);
+                        var button = InstantiateItem(_buttonPrefab, attribute.Data, component);
                         button.Init(() => method.Invoke(component, null));
                     }
                 }
@@ -226,7 +222,7 @@ namespace noio.CheatPanel
                     if (member is PropertyInfo property)
                     {
                         sliderAttribute.Data.SetTitleIfEmpty(NicifyVariableName(member.Name));
-                        var slider = InstantiateItem(_sliderPrefab, sliderAttribute.Data);
+                        var slider = InstantiateItem(_sliderPrefab, sliderAttribute.Data, component);
                         slider.Init(component, property, sliderAttribute.Min, sliderAttribute.Max);
                     }
                     else
@@ -245,7 +241,7 @@ namespace noio.CheatPanel
                     if (member is PropertyInfo property)
                     {
                         toggleAttribute.Data.SetTitleIfEmpty(NicifyVariableName(member.Name));
-                        var toggle = InstantiateItem(_togglePrefab, toggleAttribute.Data);
+                        var toggle = InstantiateItem(_togglePrefab, toggleAttribute.Data, component);
                         toggle.Init(component, property);
                     }
                     else
@@ -263,11 +259,10 @@ namespace noio.CheatPanel
             {
                 foreach (var (data, action) in buttonProvider.GetCheatButtons())
                 {
-                    var button = InstantiateItem(_buttonPrefab, data);
+                    var button = InstantiateItem(_buttonPrefab, data, component);
                     button.Init(action);
                 }
             }
-
         }
 
         CheatCategory InstantiateCategory(string title)
@@ -278,14 +273,20 @@ namespace noio.CheatPanel
             return category;
         }
 
-        T InstantiateItem<T>(T prefab, CheatItemData data) where T : CheatItem
+        T InstantiateItem<T>(T prefab, CheatItemData data, Component forComponent) where T : CheatItem
         {
-            if (_currentCategory == null)
+            var categoryTitle = string.IsNullOrEmpty(data.OverrideCategory)
+                ? NicifyVariableName(forComponent.name)
+                : data.OverrideCategory;
+
+            var category = _categories.FirstOrDefault(c => c.Title == categoryTitle);
+            if (category == null)
             {
-                _currentCategory = InstantiateCategory(NicifyVariableName(_buildingForComponent.name));
+                category = InstantiateCategory(categoryTitle);
+                _categories.Add(category);
             }
 
-            var item = Instantiate(prefab, _currentCategory.ContentParent);
+            var item = Instantiate(prefab, category.ContentParent);
 
             item.Title = data.Title;
             item.PreferredHotkeys = data.PreferredHotkeys;
