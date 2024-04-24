@@ -1,3 +1,6 @@
+// (C)2024 @noio_games
+// Thomas van den Berg
+
 using System;
 using System.Text.RegularExpressions;
 using TMPro;
@@ -10,7 +13,7 @@ namespace noio.CheatPanel
     public abstract class CheatItem : MonoBehaviour,
         IPointerClickHandler, ISubmitHandler, ISelectHandler, ICancelHandler
     {
-        #region PUBLIC AND SERIALIZED FIELDS
+        #region SERIALIZED FIELDS
 
         [SerializeField] TMP_Text _label;
 
@@ -21,17 +24,7 @@ namespace noio.CheatPanel
 
         #region PROPERTIES
 
-        public string PreferredHotkeys { get; set; }
-
-        public string Title
-        {
-            get => _title;
-            set
-            {
-                _title = value;
-                SetLabel();
-            }
-        }
+        public CheatBinding Binding { get; private set; }
 
         public char Hotkey
         {
@@ -39,7 +32,7 @@ namespace noio.CheatPanel
             set
             {
                 _hotkey = char.ToUpper(value);
-                SetLabel();
+                RefreshLabel();
             }
         }
 
@@ -83,6 +76,12 @@ namespace noio.CheatPanel
 
         #endregion
 
+        public void Init2(CheatBinding binding)
+        {
+            Binding = binding;
+            Initialize();
+        }
+
         public void OnHotkeyUsed(bool shift)
         {
             if (shift == false)
@@ -95,26 +94,31 @@ namespace noio.CheatPanel
             }
         }
 
-        void SetLabel()
+        public void RefreshLabel()
         {
             string label;
             if (Hotkey == default)
             {
-                label = Title;
+                label = Binding.Title;
             }
-            else if (Title.Contains(Hotkey, StringComparison.CurrentCultureIgnoreCase))
+            else if (Binding.Title.Contains(Hotkey, StringComparison.CurrentCultureIgnoreCase))
             {
                 var rx = new Regex($"({Hotkey})", RegexOptions.IgnoreCase);
+
                 // label = rx.Replace(Title, "<b><u>$1</u></b>", 1);
-                label = rx.Replace(Title, "<u>$1</u>", 1);
+                label = rx.Replace(Binding.Title, "<u>$1</u>", 1);
             }
             else
             {
                 // label = $"{Title} [<b><u>{Hotkey}</u></b>]";
-                label = $"{Title} [<u>{Hotkey}</u>]";
+                label = $"{Binding.Title} [<u>{Hotkey}</u>]";
             }
 
             _label.text = label;
+        }
+
+        protected virtual void Initialize()
+        {
         }
 
         protected abstract void Execute();

@@ -14,7 +14,6 @@ namespace noio.CheatPanel
 
         #endregion
 
-        MemberInfo _memberInfo;
         PropertyInfo _property;
         Object _targetObject;
 
@@ -31,7 +30,7 @@ namespace noio.CheatPanel
         }
 
         #endregion
-
+        
         public void Init(Object targetObject, PropertyInfo property, float min, float max)
         {
             _targetObject = targetObject;
@@ -51,6 +50,27 @@ namespace noio.CheatPanel
             _slider.onValueChanged.AddListener(v => PropertyValue = v);
 
             _valueLabel.SetText("{0:0.00}", defaultPropertyValue);
+        }
+
+        protected override void Initialize()
+        {
+            var binding = Binding as CheatBinding<float>;
+            var defaultPropertyValue = binding.GetValue();
+
+            _slider.minValue = binding.Min;
+            _slider.maxValue = binding.Max;
+            _slider.SetValueWithoutNotify(defaultPropertyValue);
+            
+            _slider.onValueChanged.RemoveAllListeners();
+            _slider.onValueChanged.AddListener(HandleSliderValueChanged);
+            
+            _valueLabel.SetText("{0:0.00}", defaultPropertyValue);
+        }
+
+        void HandleSliderValueChanged(float v)
+        {
+            (Binding as CheatBinding<float>).SetValue(v);
+            _valueLabel.SetText("{0:0.00}", v);
         }
 
         protected override void Execute()

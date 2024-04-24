@@ -1,3 +1,6 @@
+// (C)2024 @noio_games
+// Thomas van den Berg
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +18,7 @@ namespace noio.CheatPanel
     {
         static CheatsPanel _instance;
 
-        #region PUBLIC AND SERIALIZED FIELDS
+        #region SERIALIZED FIELDS
 
         [Tooltip("The action that activates the debug panel for the first time.")]
         [SerializeField]
@@ -44,13 +47,12 @@ namespace noio.CheatPanel
 
         #endregion
 
-        Canvas _canvas;
-
         /*
          * Build Fields:
          */
         readonly List<CheatItem> _items = new();
         readonly List<CheatCategory> _categories = new();
+        Canvas _canvas;
 
         /*
          * Runtime Fields
@@ -186,81 +188,111 @@ namespace noio.CheatPanel
             {
                 foreach (var component in go.GetComponents<Component>())
                 {
-                    AddUIForObject(component);
+                    var bindings = CreateBindingsFromAttributes(component);
+                    InstantiateUI(bindings);
                 }
             }
 
             AssignHotkeys();
         }
 
-        void AddUIForObject(Component component)
+        IEnumerable<CheatBinding> CreateBindingsFromAttributes(Component component)
         {
-            var type = component.GetType();
+            var cheatBindingEnumerableType = typeof(IEnumerable<CheatBinding>);
 
+            var type = component.GetType();
             foreach (var member in type.GetMembers())
             {
-                /*
-                 * BUTTONS
-                 */
-                if (member.GetCustomAttribute(typeof(CheatButtonAttribute), false) is
-                    CheatButtonAttribute attribute)
+                if (member.GetCustomAttribute(typeof(CheatAttribute), false) is
+                    CheatAttribute cheatAttribute)
                 {
-                    if (member is MethodInfo method)
-                    {
-                        attribute.Data.SetTitleIfEmpty(NicifyVariableName(member.Name));
-                        var button = InstantiateItem(_buttonPrefab, attribute.Data, component);
-                        button.Init(() => method.Invoke(component, null));
-                    }
-                }
+                    GetTitleAndCategory(cheatAttribute, member, component,
+                        out var title, out var category);
 
-                /*
-                 * SLIDERS
-                 */
-                if (member.GetCustomAttribute(typeof(CheatSliderAttribute), false) is
-                    CheatSliderAttribute sliderAttribute)
-                {
-                    if (member is PropertyInfo property)
+                    switch (member)
                     {
-                        sliderAttribute.Data.SetTitleIfEmpty(NicifyVariableName(member.Name));
-                        var slider = InstantiateItem(_sliderPrefab, sliderAttribute.Data, component);
-                        slider.Init(component, property, sliderAttribute.Min, sliderAttribute.Max);
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"{type.Name}.{member.Name} has [CheatSlider] attribute " +
-                                         "but it's not a float or int property");
-                    }
-                }
+                        case MethodInfo method:
+                        {
+                            /*
+                             * Either an action that we can call, or a method that returns a list
+                             * of cheatbindings, let's find out.
+                             */
+                            if (method.ReturnType == typeof(void))
+                            {
+                                yield return new CheatActionBinding(title,
+                                    () => method.Invoke(component, null),
+                                    cheatAttribute.PreferredHotkeys, category);
+                            }
+                            else if (cheatBindingEnumerableType.IsAssignableFrom(method.ReturnType))
+                            {
+                                /*
+                                 * We can get a list of bindings, and just yield those
+                                 */
+                                var bindings = (IEnumerable<CheatBinding>)method.Invoke(component, null);
+                                foreach (var binding in bindings)
+                                {
+                                    yield return binding;
+                                }
+                            }
 
-                /*
-                 * TOGGLES
-                 */
-                if (member.GetCustomAttribute(typeof(CheatToggleAttribute), false) is
-                    CheatToggleAttribute toggleAttribute)
-                {
-                    if (member is PropertyInfo property)
-                    {
-                        toggleAttribute.Data.SetTitleIfEmpty(NicifyVariableName(member.Name));
-                        var toggle = InstantiateItem(_togglePrefab, toggleAttribute.Data, component);
-                        toggle.Init(component, property);
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"{type.Name}.{member.Name} has [CheatSlider] attribute " +
-                                         "but it's not a float or int property");
+                            break;
+                        }
+                        case PropertyInfo property:
+                        {
+                            if (property.PropertyType == typeof(float))
+                            {
+                                yield return new CheatBinding<float>(title,
+                                    () => (float)property.GetValue(component),
+                                    value => property.SetValue(component, value),
+                                    cheatAttribute.Min, cheatAttribute.Max,
+                                    cheatAttribute.PreferredHotkeys, category);
+                            }
+                            else if (property.PropertyType == typeof(bool))
+                            {
+                                yield return new CheatBinding<bool>(title,
+                                    () => (bool)property.GetValue(component),
+                                    value => property.SetValue(component, value),
+                                    cheatAttribute.Min, cheatAttribute.Max,
+                                    cheatAttribute.PreferredHotkeys, category);
+                            }
+
+                            break;
+                        }
                     }
                 }
             }
+        }
 
-            /*
-             * Spawn DYNAMIC BUTTONS (returned by the ICheatButtonProvider)
-             */
-            if (component is ICheatButtonProvider buttonProvider)
+        static void GetTitleAndCategory(
+            CheatAttribute attribute,
+            MemberInfo     memberInfo,
+            Component      component,
+            out string     title,
+            out string     category)
+        {
+            title = string.IsNullOrEmpty(attribute.Title)
+                ? NicifyVariableName(memberInfo.Name)
+                : attribute.Title;
+            category = string.IsNullOrEmpty(attribute.Category)
+                ? NicifyVariableName(component.name)
+                : attribute.Category;
+        }
+
+        void InstantiateUI(IEnumerable<CheatBinding> bindings)
+        {
+            foreach (var binding in bindings)
             {
-                foreach (var (data, action) in buttonProvider.GetCheatButtons())
+                switch (binding)
                 {
-                    var button = InstantiateItem(_buttonPrefab, data, component);
-                    button.Init(action);
+                    case CheatBinding<float> floatBinding:
+                        InstantiateItem(_sliderPrefab, floatBinding);
+                        break;
+                    case CheatBinding<bool> boolBinding:
+                        InstantiateItem(_togglePrefab, boolBinding);
+                        break;
+                    case CheatActionBinding actionBinding:
+                        InstantiateItem(_buttonPrefab, actionBinding);
+                        break;
                 }
             }
         }
@@ -273,27 +305,21 @@ namespace noio.CheatPanel
             return category;
         }
 
-        T InstantiateItem<T>(T prefab, CheatItemData data, Component forComponent) where T : CheatItem
+        T InstantiateItem<T>(T prefab, CheatBinding binding) where T : CheatItem
         {
-            var categoryTitle = string.IsNullOrEmpty(data.OverrideCategory)
-                ? NicifyVariableName(forComponent.name)
-                : data.OverrideCategory;
-
-            var category = _categories.FirstOrDefault(c => c.Title == categoryTitle);
+            var category = _categories.FirstOrDefault(c => c.Title == binding.Category);
             if (category == null)
             {
-                category = InstantiateCategory(categoryTitle);
+                category = InstantiateCategory(binding.Category);
                 _categories.Add(category);
             }
 
             var item = Instantiate(prefab, category.ContentParent);
-
-            item.Title = data.Title;
-            item.PreferredHotkeys = data.PreferredHotkeys;
+            item.Init2(binding);
 
             // item.HueTint = (member.DeclaringType.Name.GetHashCode() / (float)int.MaxValue) * .5f + .5f;
 
-            item.name = item.Title;
+            item.name = binding.Title;
             _items.Add(item);
             return item;
         }
@@ -304,12 +330,12 @@ namespace noio.CheatPanel
             /*
              * Start with those items that have set a Preferred Hotkey.
              */
-            var orderedItems = _items.OrderBy(item => string.IsNullOrEmpty(item.PreferredHotkeys));
+            var orderedItems = _items.OrderBy(item => string.IsNullOrEmpty(item.Binding.PreferredHotkeys));
             foreach (var item in orderedItems)
             {
-                var title = item.Title.ToUpper();
+                var title = item.Binding.Title.ToUpper();
 
-                var possibleBindings = (item.PreferredHotkeys + title + _hotkeys).ToUpper();
+                var possibleBindings = (item.Binding.PreferredHotkeys + title + _hotkeys).ToUpper();
 
                 var foundBinding = possibleBindings.FirstOrDefault(
                     c => _hotkeys.Contains(c) &&
@@ -446,7 +472,8 @@ namespace noio.CheatPanel
                 var item = _items.FirstOrDefault(a => a.Hotkey == char.ToUpper(inputChar));
                 if (item != null)
                 {
-                    Debug.Log($"F{Time.frameCount} Run Hotkey \"{char.ToUpper(inputChar)}\": {item.Title}");
+                    Debug.Log(
+                        $"F{Time.frameCount} Run Hotkey \"{char.ToUpper(inputChar)}\": {item.Binding.Title}");
                     item.OnHotkeyUsed(Keyboard.current.shiftKey.isPressed);
                 }
             }

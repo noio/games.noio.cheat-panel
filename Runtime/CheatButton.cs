@@ -1,7 +1,8 @@
+// (C)2024 @noio_games
+// Thomas van den Berg
+
 using System;
-using System.Reflection;
 using UnityEngine.UI;
-using Object = UnityEngine.Object;
 
 namespace noio.CheatPanel
 {
@@ -9,8 +10,7 @@ namespace noio.CheatPanel
     {
         Button _button;
         Action _action;
-        Object _targetObject;
-        MethodInfo _method;
+        CheatActionBinding _binding;
 
         #region MONOBEHAVIOUR METHODS
 
@@ -21,6 +21,7 @@ namespace noio.CheatPanel
         }
 
         #endregion
+        
 
         public void Init(Action action)
         {
@@ -29,7 +30,8 @@ namespace noio.CheatPanel
 
         protected override void Execute()
         {
-            _action.Invoke();
+            (Binding as CheatActionBinding)?.Action.Invoke();
+            _action?.Invoke();
         }
 
         protected override void ExecuteAlt()

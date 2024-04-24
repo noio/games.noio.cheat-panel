@@ -1,4 +1,6 @@
-using System.Reflection;
+// (C)2024 @noio_games
+// Thomas van den Berg
+
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,25 +9,22 @@ namespace noio.CheatPanel
 {
     internal class CheatToggle : CheatItem
     {
-        #region PUBLIC AND SERIALIZED FIELDS
+        #region SERIALIZED FIELDS
 
         [SerializeField] TMP_Text _valueLabel;
 
         #endregion
 
         Button _button;
-        MemberInfo _memberInfo;
-        PropertyInfo _property;
-        Object _targetObject;
 
         #region PROPERTIES
 
         bool PropertyValue
         {
-            get => (bool)_property.GetValue(_targetObject);
+            get => (Binding as CheatBinding<bool>)?.GetValue() ?? false;
             set
             {
-                _property.SetValue(_targetObject, value);
+                (Binding as CheatBinding<bool>)?.SetValue(value);
                 SetValueLabel();
             }
         }
@@ -42,12 +41,8 @@ namespace noio.CheatPanel
 
         #endregion
 
-        public void Init(Object targetObject, PropertyInfo property)
+        protected override void Initialize()
         {
-            _targetObject = targetObject;
-            _property = property;
-
-            SetValueLabel();
         }
 
         void SetValueLabel()
