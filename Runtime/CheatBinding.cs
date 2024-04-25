@@ -19,8 +19,14 @@ namespace noio.CheatPanel
         public string Title { get; set; }
         public string PreferredHotkeys { get; set; }
         public string Category { get; }
+        public char Hotkey { get; private set; }
 
         #endregion
+
+        public void SetHotkey(char c)
+        {
+            Hotkey = c;
+        }
     }
 
     public class CheatBinding<T> : CheatBinding where T : struct
@@ -74,5 +80,16 @@ namespace noio.CheatPanel
         public Action Action { get; }
 
         #endregion
+    }
+
+    public class CheatOpenPageBinding : CheatActionBinding
+    {
+        public CheatOpenPageBinding(
+            string title,
+            Action action,
+            string preferredHotkeys = "",
+            string category         = "") : base(title, action, preferredHotkeys, category)
+        {
+        }
     }
 }

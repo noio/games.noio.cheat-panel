@@ -52,7 +52,7 @@ namespace noio.CheatPanel
             _valueLabel.SetText("{0:0.00}", defaultPropertyValue);
         }
 
-        protected override void Initialize()
+        protected override void InitializeInternal()
         {
             var binding = Binding as CheatBinding<float>;
             var defaultPropertyValue = binding.GetValue();

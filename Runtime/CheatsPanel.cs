@@ -52,6 +52,8 @@ namespace noio.CheatPanel
          */
         readonly List<CheatItem> _items = new();
         readonly List<CheatCategory> _categories = new();
+        readonly Stack<Page> _pageStack = new();
+        Page _currentPage;
         Canvas _canvas;
 
         /*
@@ -121,7 +123,8 @@ namespace noio.CheatPanel
 
         void Start()
         {
-            BuildUI();
+            var firstPage = CreatePage(_bindToObjects);
+            OpenPage(firstPage);
         }
 
         void OnEnable()
@@ -142,6 +145,48 @@ namespace noio.CheatPanel
         }
 
         #endregion
+
+        void SetMode(Mode newMode)
+        {
+            if (_mode != newMode)
+            {
+                switch (newMode)
+                {
+                    case Mode.PermanentlyRemoved:
+                        Destroy(gameObject);
+                        break;
+
+                    case Mode.Disabled:
+                        Cursor.visible = _originalCursorVisible;
+                        Cursor.lockState = _originalCursorLockState;
+                        gameObject.SetActive(false);
+                        break;
+
+                    case Mode.Enabled:
+                        _originalCursorVisible = Cursor.visible;
+                        _originalCursorLockState = Cursor.lockState;
+                        Cursor.visible = true;
+                        Cursor.lockState = CursorLockMode.None;
+
+                        _canvas.gameObject.SetActive(true);
+                        gameObject.SetActive(true);
+                        SelectFirstButton();
+                        break;
+
+                    case Mode.Invisible:
+                        Cursor.visible = _originalCursorVisible;
+                        Cursor.lockState = _originalCursorLockState;
+                        gameObject.SetActive(true);
+                        _canvas.gameObject.SetActive(false);
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(newMode), newMode, null);
+                }
+
+                _mode = newMode;
+            }
+        }
 
         public static void Hide()
         {
@@ -174,8 +219,41 @@ namespace noio.CheatPanel
             _isQuitting = true;
         }
 
-        void BuildUI()
+        Page CreatePage(GameObject[] fromObjects)
         {
+            var page = new Page();
+
+            foreach (var go in fromObjects)
+            {
+                foreach (var component in go.GetComponents<Component>())
+                {
+                    var bindings = CreateBindingsFromAttributes(component);
+                    page.Bindings.AddRange(bindings);
+                }
+            }
+
+            AssignHotkeys(page);
+            return page;
+        }
+
+        Page CreatePage(IEnumerable<CheatBinding> bindings)
+        {
+            var page = new Page();
+            page.Bindings.AddRange(bindings);
+
+            AssignHotkeys(page);
+            return page;
+        }
+
+        void OpenPage(Page page, bool pushPreviousToStack= true)
+        {
+            if (_currentPage != null && pushPreviousToStack)
+            {
+                _pageStack.Push(_currentPage);
+            }
+
+            _currentPage = page;
+
             for (var i = _contentParent.childCount - 1; i >= 0; i--)
             {
                 Destroy(_contentParent.GetChild(i).gameObject);
@@ -184,16 +262,21 @@ namespace noio.CheatPanel
             _items.Clear();
             _categories.Clear();
 
-            foreach (var go in _bindToObjects)
-            {
-                foreach (var component in go.GetComponents<Component>())
-                {
-                    var bindings = CreateBindingsFromAttributes(component);
-                    InstantiateUI(bindings);
-                }
-            }
+            InstantiateUI(page);
+        }
 
-            AssignHotkeys();
+        void CloseCurrentPage()
+        {
+            var previousPage = _pageStack.Pop();
+            OpenPage(previousPage, false);
+        }
+
+        void GoBackToFirstPage()
+        {
+            while (_pageStack.Count > 0)
+            {
+                CloseCurrentPage();
+            }
         }
 
         IEnumerable<CheatBinding> CreateBindingsFromAttributes(Component component)
@@ -225,13 +308,31 @@ namespace noio.CheatPanel
                             }
                             else if (cheatBindingEnumerableType.IsAssignableFrom(method.ReturnType))
                             {
-                                /*
-                                 * We can get a list of bindings, and just yield those
-                                 */
-                                var bindings = (IEnumerable<CheatBinding>)method.Invoke(component, null);
-                                foreach (var binding in bindings)
+                                if (cheatAttribute.NewPage == false)
                                 {
-                                    yield return binding;
+                                    /*
+                                     * Just add sub-bindings to the current page
+                                     */
+                                    var bindings = (IEnumerable<CheatBinding>)method.Invoke(component, null);
+                                    foreach (var binding in bindings)
+                                    {
+                                        yield return binding;
+                                    }
+                                }
+                                else
+                                {
+                                    var openPageBinding = new CheatOpenPageBinding(title,
+                                        preferredHotkeys: cheatAttribute.PreferredHotkeys,
+                                        category: category,
+                                        action:
+                                        () =>
+                                        {
+                                            var bindings =
+                                                (IEnumerable<CheatBinding>)method.Invoke(component, null);
+                                            var page = CreatePage(bindings);
+                                            OpenPage(page);
+                                        });
+                                    yield return openPageBinding;
                                 }
                             }
 
@@ -263,24 +364,9 @@ namespace noio.CheatPanel
             }
         }
 
-        static void GetTitleAndCategory(
-            CheatAttribute attribute,
-            MemberInfo     memberInfo,
-            Component      component,
-            out string     title,
-            out string     category)
+        void InstantiateUI(Page page)
         {
-            title = string.IsNullOrEmpty(attribute.Title)
-                ? NicifyVariableName(memberInfo.Name)
-                : attribute.Title;
-            category = string.IsNullOrEmpty(attribute.Category)
-                ? NicifyVariableName(component.name)
-                : attribute.Category;
-        }
-
-        void InstantiateUI(IEnumerable<CheatBinding> bindings)
-        {
-            foreach (var binding in bindings)
+            foreach (var binding in page.Bindings)
             {
                 switch (binding)
                 {
@@ -305,6 +391,21 @@ namespace noio.CheatPanel
             return category;
         }
 
+        static void GetTitleAndCategory(
+            CheatAttribute attribute,
+            MemberInfo     memberInfo,
+            Component      component,
+            out string     title,
+            out string     category)
+        {
+            title = string.IsNullOrEmpty(attribute.Title)
+                ? NicifyVariableName(memberInfo.Name)
+                : attribute.Title;
+            category = string.IsNullOrEmpty(attribute.Category)
+                ? NicifyVariableName(component.name)
+                : attribute.Category;
+        }
+
         T InstantiateItem<T>(T prefab, CheatBinding binding) where T : CheatItem
         {
             var category = _categories.FirstOrDefault(c => c.Title == binding.Category);
@@ -315,27 +416,29 @@ namespace noio.CheatPanel
             }
 
             var item = Instantiate(prefab, category.ContentParent);
-            item.Init2(binding);
+            item.Initialize(binding);
 
             // item.HueTint = (member.DeclaringType.Name.GetHashCode() / (float)int.MaxValue) * .5f + .5f;
 
             item.name = binding.Title;
+            item.RefreshLabel();
+
             _items.Add(item);
             return item;
         }
 
-        void AssignHotkeys()
+        void AssignHotkeys(Page page)
         {
             var occupiedHotkeys = "";
             /*
              * Start with those items that have set a Preferred Hotkey.
              */
-            var orderedItems = _items.OrderBy(item => string.IsNullOrEmpty(item.Binding.PreferredHotkeys));
-            foreach (var item in orderedItems)
+            var orderedBindings = page.Bindings.OrderBy(item => string.IsNullOrEmpty(item.PreferredHotkeys));
+            foreach (var binding in orderedBindings)
             {
-                var title = item.Binding.Title.ToUpper();
+                var title = binding.Title.ToUpper();
 
-                var possibleBindings = (item.Binding.PreferredHotkeys + title + _hotkeys).ToUpper();
+                var possibleBindings = (binding.PreferredHotkeys + title + _hotkeys).ToUpper();
 
                 var foundBinding = possibleBindings.FirstOrDefault(
                     c => _hotkeys.Contains(c) &&
@@ -345,7 +448,7 @@ namespace noio.CheatPanel
                 if (foundBinding != default)
                 {
                     occupiedHotkeys += foundBinding;
-                    item.Hotkey = foundBinding.ToString()[0];
+                    binding.SetHotkey(foundBinding.ToString()[0]);
                 }
             }
         }
@@ -407,48 +510,6 @@ namespace noio.CheatPanel
             }
         }
 
-        void SetMode(Mode newMode)
-        {
-            if (_mode != newMode)
-            {
-                switch (newMode)
-                {
-                    case Mode.PermanentlyRemoved:
-                        Destroy(gameObject);
-                        break;
-
-                    case Mode.Disabled:
-                        Cursor.visible = _originalCursorVisible;
-                        Cursor.lockState = _originalCursorLockState;
-                        gameObject.SetActive(false);
-                        break;
-
-                    case Mode.Enabled:
-                        _originalCursorVisible = Cursor.visible;
-                        _originalCursorLockState = Cursor.lockState;
-                        Cursor.visible = true;
-                        Cursor.lockState = CursorLockMode.None;
-
-                        _canvas.gameObject.SetActive(true);
-                        gameObject.SetActive(true);
-                        SelectFirstButton();
-                        break;
-
-                    case Mode.Invisible:
-                        Cursor.visible = _originalCursorVisible;
-                        Cursor.lockState = _originalCursorLockState;
-                        gameObject.SetActive(true);
-                        _canvas.gameObject.SetActive(false);
-                        break;
-
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(newMode), newMode, null);
-                }
-
-                _mode = newMode;
-            }
-        }
-
         void SelectFirstButton()
         {
             if (_items.Count > 0)
@@ -469,12 +530,25 @@ namespace noio.CheatPanel
                 _mode != Mode.Disabled &&
                 Time.frameCount > 1)
             {
-                var item = _items.FirstOrDefault(a => a.Hotkey == char.ToUpper(inputChar));
+                /*
+                 * We really shouldn't rely on the ITEMS (the UI objects) to execute
+                 * the hotkeys. Ideally we'd just go through the bindings. But for that
+                 * we'd need to work on the CheatBinding<T> some more to give it an Execute method.
+                 * But if we do that, we can just cache the Bindings for ALL pages, and we don't have
+                 * to create the actual UI objects if the panel is closed!
+                 * Then the "CheatOpenPageBinding" could just point to the path of the page it wants to open
+                 */
+                var item = _items.FirstOrDefault(a => a.Binding.Hotkey == char.ToUpper(inputChar));
                 if (item != null)
                 {
                     Debug.Log(
                         $"F{Time.frameCount} Run Hotkey \"{char.ToUpper(inputChar)}\": {item.Binding.Title}");
                     item.OnHotkeyUsed(Keyboard.current.shiftKey.isPressed);
+
+                    if (_mode == Mode.Invisible && item.Binding is not CheatOpenPageBinding)
+                    {
+                        GoBackToFirstPage();
+                    }
                 }
             }
         }
@@ -495,7 +569,15 @@ namespace noio.CheatPanel
                 switch (_mode)
                 {
                     case Mode.Enabled:
-                        SetMode(Mode.Invisible);
+                        if (_pageStack.Count > 0)
+                        {
+                            CloseCurrentPage();
+                        }
+                        else
+                        {
+                            SetMode(Mode.Invisible);
+                        }
+
                         break;
                     case Mode.Invisible:
                         SetMode(Mode.Enabled);
@@ -503,6 +585,15 @@ namespace noio.CheatPanel
                 }
             });
         }
+
+        #endregion
+    }
+
+    internal class Page
+    {
+        #region PROPERTIES
+
+        public List<CheatBinding> Bindings { get; } = new();
 
         #endregion
     }

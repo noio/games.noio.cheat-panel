@@ -41,7 +41,7 @@ namespace noio.CheatPanel
 
         #endregion
 
-        protected override void Initialize()
+        protected override void InitializeInternal()
         {
         }
 

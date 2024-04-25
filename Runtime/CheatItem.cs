@@ -25,16 +25,7 @@ namespace noio.CheatPanel
         #region PROPERTIES
 
         public CheatBinding Binding { get; private set; }
-
-        public char Hotkey
-        {
-            get => _hotkey;
-            set
-            {
-                _hotkey = char.ToUpper(value);
-                RefreshLabel();
-            }
-        }
+        
 
         public float HueTint
         {
@@ -76,10 +67,10 @@ namespace noio.CheatPanel
 
         #endregion
 
-        public void Init2(CheatBinding binding)
+        public void Initialize(CheatBinding binding)
         {
             Binding = binding;
-            Initialize();
+            InitializeInternal();
         }
 
         public void OnHotkeyUsed(bool shift)
@@ -97,27 +88,28 @@ namespace noio.CheatPanel
         public void RefreshLabel()
         {
             string label;
-            if (Hotkey == default)
+            var hotkey = Binding.Hotkey;
+            if (hotkey == default)
             {
                 label = Binding.Title;
             }
-            else if (Binding.Title.Contains(Hotkey, StringComparison.CurrentCultureIgnoreCase))
+            else if (Binding.Title.Contains(hotkey, StringComparison.CurrentCultureIgnoreCase))
             {
-                var rx = new Regex($"({Hotkey})", RegexOptions.IgnoreCase);
+                var rx = new Regex($"({hotkey})", RegexOptions.IgnoreCase);
 
                 // label = rx.Replace(Title, "<b><u>$1</u></b>", 1);
                 label = rx.Replace(Binding.Title, "<u>$1</u>", 1);
             }
             else
             {
-                // label = $"{Title} [<b><u>{Hotkey}</u></b>]";
-                label = $"{Binding.Title} [<u>{Hotkey}</u>]";
+                // label = $"{Title} [<b><u>{hotkey}</u></b>]";
+                label = $"{Binding.Title} [<u>{hotkey}</u>]";
             }
 
             _label.text = label;
         }
 
-        protected virtual void Initialize()
+        protected virtual void InitializeInternal()
         {
         }
 
