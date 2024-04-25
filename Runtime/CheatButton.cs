@@ -17,26 +17,15 @@ namespace noio.CheatPanel
         void Awake()
         {
             _button = GetComponent<Button>();
-            _button.onClick.AddListener(Execute);
+            _button.onClick.AddListener(() => Binding.Execute());
         }
 
         #endregion
-        
 
         public void Init(Action action)
         {
             _action = action;
         }
-
-        protected override void Execute()
-        {
-            (Binding as CheatActionBinding)?.Action.Invoke();
-            _action?.Invoke();
-        }
-
-        protected override void ExecuteAlt()
-        {
-            Execute();
-        }
+        
     }
 }

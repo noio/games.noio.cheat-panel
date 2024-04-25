@@ -1,4 +1,6 @@
-using System.Reflection;
+// (C)2024 @noio_games
+// Thomas van den Berg
+
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,80 +9,55 @@ namespace noio.CheatPanel
 {
     internal class CheatSlider : CheatItem
     {
-        #region PUBLIC AND SERIALIZED FIELDS
+        #region SERIALIZED FIELDS
 
         [SerializeField] Slider _slider;
         [SerializeField] TMP_Text _valueLabel;
 
         #endregion
 
-        PropertyInfo _property;
-        Object _targetObject;
-
         #region PROPERTIES
 
-        float PropertyValue
+        float Value
         {
-            get => (float)_property.GetValue(_targetObject);
-            set
-            {
-                _property.SetValue(_targetObject, value);
-                _valueLabel.SetText("{0:0.00}", value);
-            }
+            get => (Binding as CheatFloatBinding).Value;
+            set => (Binding as CheatFloatBinding).Value = value;
         }
 
         #endregion
-        
-        public void Init(Object targetObject, PropertyInfo property, float min, float max)
-        {
-            _targetObject = targetObject;
-            _property = property;
-            /*
-             * Store default value because sometimes
-             * property is already changed
-             * by setting min/max
-             */
-            var defaultPropertyValue = PropertyValue;
-            
-            _slider.minValue = min;
-            _slider.maxValue = max;
-            _slider.SetValueWithoutNotify(defaultPropertyValue);
-
-            _slider.onValueChanged.RemoveAllListeners();
-            _slider.onValueChanged.AddListener(v => PropertyValue = v);
-
-            _valueLabel.SetText("{0:0.00}", defaultPropertyValue);
-        }
 
         protected override void InitializeInternal()
         {
-            var binding = Binding as CheatBinding<float>;
-            var defaultPropertyValue = binding.GetValue();
+            var binding = Binding as CheatFloatBinding;
+            var defaultPropertyValue = binding.Value;
+
+            binding.ValueChanged += HandleBindingValueChanged;
 
             _slider.minValue = binding.Min;
             _slider.maxValue = binding.Max;
             _slider.SetValueWithoutNotify(defaultPropertyValue);
-            
+
             _slider.onValueChanged.RemoveAllListeners();
             _slider.onValueChanged.AddListener(HandleSliderValueChanged);
-            
-            _valueLabel.SetText("{0:0.00}", defaultPropertyValue);
+
+            SetLabel();
+        }
+
+        void HandleBindingValueChanged()
+        {
+            _slider.SetValueWithoutNotify(Value);
+            SetLabel();
         }
 
         void HandleSliderValueChanged(float v)
         {
-            (Binding as CheatBinding<float>).SetValue(v);
-            _valueLabel.SetText("{0:0.00}", v);
+            Value = v;
+            SetLabel();
         }
 
-        protected override void Execute()
+        void SetLabel()
         {
-            _slider.normalizedValue += 0.1f;
-        }
-
-        protected override void ExecuteAlt()
-        {
-            _slider.normalizedValue -= 0.1f;
+            _valueLabel.SetText("{0:0.00}", Value);
         }
     }
 }

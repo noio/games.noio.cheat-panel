@@ -19,15 +19,7 @@ namespace noio.CheatPanel
 
         #region PROPERTIES
 
-        bool PropertyValue
-        {
-            get => (Binding as CheatBinding<bool>)?.GetValue() ?? false;
-            set
-            {
-                (Binding as CheatBinding<bool>)?.SetValue(value);
-                SetValueLabel();
-            }
-        }
+        bool Value => (Binding as CheatBoolBinding)?.Value ?? false;
 
         #endregion
 
@@ -36,28 +28,25 @@ namespace noio.CheatPanel
         void Awake()
         {
             _button = GetComponent<Button>();
-            _button.onClick.AddListener(Execute);
+            _button.onClick.AddListener(() => Binding.Execute());
         }
 
         #endregion
 
         protected override void InitializeInternal()
         {
+            (Binding as CheatBoolBinding).ValueChanged += HandleBindingValueChanged;
+            SetValueLabel();
+        }
+
+        void HandleBindingValueChanged()
+        {
+            SetValueLabel();
         }
 
         void SetValueLabel()
         {
-            _valueLabel.text = PropertyValue ? "ON" : "OFF";
-        }
-
-        protected override void Execute()
-        {
-            PropertyValue = !PropertyValue;
-        }
-
-        protected override void ExecuteAlt()
-        {
-            Execute();
+            _valueLabel.text = Value ? "ON" : "OFF";
         }
     }
 }

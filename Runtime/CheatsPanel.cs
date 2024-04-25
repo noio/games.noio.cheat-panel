@@ -342,7 +342,7 @@ namespace noio.CheatPanel
                         {
                             if (property.PropertyType == typeof(float))
                             {
-                                yield return new CheatBinding<float>(title,
+                                yield return new CheatFloatBinding(title,
                                     () => (float)property.GetValue(component),
                                     value => property.SetValue(component, value),
                                     cheatAttribute.Min, cheatAttribute.Max,
@@ -350,10 +350,9 @@ namespace noio.CheatPanel
                             }
                             else if (property.PropertyType == typeof(bool))
                             {
-                                yield return new CheatBinding<bool>(title,
+                                yield return new CheatBoolBinding(title,
                                     () => (bool)property.GetValue(component),
                                     value => property.SetValue(component, value),
-                                    cheatAttribute.Min, cheatAttribute.Max,
                                     cheatAttribute.PreferredHotkeys, category);
                             }
 
@@ -543,7 +542,9 @@ namespace noio.CheatPanel
                 {
                     Debug.Log(
                         $"F{Time.frameCount} Run Hotkey \"{char.ToUpper(inputChar)}\": {item.Binding.Title}");
-                    item.OnHotkeyUsed(Keyboard.current.shiftKey.isPressed);
+                    
+                    
+                    item.Binding.Execute(Keyboard.current.shiftKey.isPressed);
 
                     if (_mode == Mode.Invisible && item.Binding is not CheatOpenPageBinding)
                     {

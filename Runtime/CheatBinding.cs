@@ -2,6 +2,7 @@
 // Thomas van den Berg
 
 using System;
+using UnityEngine;
 
 namespace noio.CheatPanel
 {
@@ -27,16 +28,19 @@ namespace noio.CheatPanel
         {
             Hotkey = c;
         }
+
+        public abstract void Execute(bool shift=false);
     }
 
-    public class CheatBinding<T> : CheatBinding where T : struct
+    public abstract class CheatBinding<T> : CheatBinding where T : struct
     {
+        public event Action ValueChanged;
         public CheatBinding(
             string    title,
             Func<T>   getValue,
             Action<T> setValue,
-            float     min,
-            float     max,
+            float     min              = 0,
+            float     max              = 10,
             string    preferredHotkeys = "",
             string    category         = "")
             : base(title, preferredHotkeys, category)
@@ -49,18 +53,75 @@ namespace noio.CheatPanel
 
         #region PROPERTIES
 
-        public Func<T> GetValue { get; }
-        public Action<T> SetValue { get; }
+        Func<T> GetValue { get; }
+        Action<T> SetValue { get; }
         public float Min { get; set; }
         public float Max { get; set; }
 
         public T Value
         {
             get => GetValue();
-            set => SetValue(value);
+            set
+            {
+                SetValue(value);
+                ValueChanged?.Invoke();
+            }
         }
 
         #endregion
+    }
+
+    public class CheatFloatBinding : CheatBinding<float>
+    {
+        public CheatFloatBinding(
+            string        title,
+            Func<float>   getValue,
+            Action<float> setValue,
+            float         min,
+            float         max,
+            string        preferredHotkeys = "",
+            string        category         = "") :
+            base(title, getValue, setValue,
+                min, max, preferredHotkeys, category)
+        {
+        }
+
+        public override void Execute(bool shift)
+        {
+            var value = Value;
+            var incr = (Max - Min) * .1f;
+            if (shift)
+            {
+                incr = -incr;
+            }
+
+            Value = Mathf.Clamp(value + incr, Min, Max);
+        }
+    }
+
+    public class CheatBoolBinding : CheatBinding<bool>
+    {
+        public CheatBoolBinding(
+            string       title,
+            Func<bool>   getValue,
+            Action<bool> setValue,
+            string       preferredHotkeys = "",
+            string       category         = "")
+            : base(title, getValue, setValue, 0, 1, preferredHotkeys, category)
+        {
+        }
+
+        public override void Execute(bool shift)
+        {
+            if (shift)
+            {
+                Value = false;
+            }
+            else
+            {
+                Value = !Value;
+            }
+        }
     }
 
     public class CheatActionBinding : CheatBinding
@@ -80,6 +141,11 @@ namespace noio.CheatPanel
         public Action Action { get; }
 
         #endregion
+
+        public override void Execute(bool shift)
+        {
+            Action?.Invoke();
+        }
     }
 
     public class CheatOpenPageBinding : CheatActionBinding

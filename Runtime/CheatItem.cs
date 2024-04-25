@@ -62,7 +62,7 @@ namespace noio.CheatPanel
 
         public void OnCancel(BaseEventData eventData)
         {
-            ExecuteAlt();
+            Binding.Execute(true);
         }
 
         #endregion
@@ -73,17 +73,6 @@ namespace noio.CheatPanel
             InitializeInternal();
         }
 
-        public void OnHotkeyUsed(bool shift)
-        {
-            if (shift == false)
-            {
-                Execute();
-            }
-            else
-            {
-                ExecuteAlt();
-            }
-        }
 
         public void RefreshLabel()
         {
@@ -113,7 +102,5 @@ namespace noio.CheatPanel
         {
         }
 
-        protected abstract void Execute();
-        protected abstract void ExecuteAlt();
     }
 }
