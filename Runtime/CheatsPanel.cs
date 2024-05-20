@@ -365,7 +365,7 @@ namespace noio.CheatPanel
 
         void InstantiateUI(Page page)
         {
-            foreach (var binding in page.Bindings)
+            foreach (var binding in page.Bindings.OrderBy(b=>b.Title))
             {
                 switch (binding)
                 {
