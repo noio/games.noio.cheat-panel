@@ -8,10 +8,15 @@ namespace noio.CheatPanel
 {
     public abstract class CheatBinding
     {
-        public CheatBinding(string title, string preferredHotkeys = "", string category = "")
+        public CheatBinding(
+            string title,
+            string preferredHotkeys = "",
+            int hotkeyPriority = 0,
+            string category = "")
         {
             Title = title;
             PreferredHotkeys = preferredHotkeys;
+            HotkeyPriority = hotkeyPriority;
             Category = category;
         }
 
@@ -19,8 +24,17 @@ namespace noio.CheatPanel
 
         public string Title { get; set; }
         public string PreferredHotkeys { get; set; }
+        public int HotkeyPriority { get; set; }
         public string Category { get; }
         public char Hotkey { get; private set; }
+
+        /// <summary>
+        ///     Returns a priority sorting key for this binding. Bindings with preferred hotkeys
+        ///     set are always sorted to a higher priority. Otherwise just returns the
+        ///     manually set HotkeyPriority
+        /// </summary>
+        public int HotkeyPrioritySortingKey =>
+            HotkeyPriority + (string.IsNullOrEmpty(PreferredHotkeys) ? 0 : 1000);
 
         #endregion
 
@@ -29,21 +43,22 @@ namespace noio.CheatPanel
             Hotkey = c;
         }
 
-        public abstract void Execute(bool shift=false);
+        public abstract void Execute(bool shift = false);
     }
 
     public abstract class CheatBinding<T> : CheatBinding where T : struct
     {
         public event Action ValueChanged;
-        public CheatBinding(
-            string    title,
-            Func<T>   getValue,
+
+        public CheatBinding(string title,
+            Func<T> getValue,
             Action<T> setValue,
-            float     min              = 0,
-            float     max              = 10,
-            string    preferredHotkeys = "",
-            string    category         = "")
-            : base(title, preferredHotkeys, category)
+            float min = 0,
+            float max = 10,
+            string preferredHotkeys = "",
+            int hotkeyPriority = 0,
+            string category = "")
+            : base(title, preferredHotkeys, hotkeyPriority, category)
         {
             GetValue = getValue;
             SetValue = setValue;
@@ -73,16 +88,16 @@ namespace noio.CheatPanel
 
     public class CheatFloatBinding : CheatBinding<float>
     {
-        public CheatFloatBinding(
-            string        title,
-            Func<float>   getValue,
+        public CheatFloatBinding(string title,
+            Func<float> getValue,
             Action<float> setValue,
-            float         min,
-            float         max,
-            string        preferredHotkeys = "",
-            string        category         = "") :
+            float min,
+            float max,
+            string preferredHotkeys = "",
+            string category = "",
+            int hotkeyPriority = 0) :
             base(title, getValue, setValue,
-                min, max, preferredHotkeys, category)
+                min, max, preferredHotkeys, hotkeyPriority, category)
         {
         }
 
@@ -102,12 +117,13 @@ namespace noio.CheatPanel
     public class CheatBoolBinding : CheatBinding<bool>
     {
         public CheatBoolBinding(
-            string       title,
-            Func<bool>   getValue,
+            string title,
+            Func<bool> getValue,
             Action<bool> setValue,
-            string       preferredHotkeys = "",
-            string       category         = "")
-            : base(title, getValue, setValue, 0, 1, preferredHotkeys, category)
+            string preferredHotkeys = "",
+            int hotkeyPriority = 0,
+            string category = "")
+            : base(title, getValue, setValue, 0, 1, preferredHotkeys, hotkeyPriority, category)
         {
         }
 
@@ -130,8 +146,9 @@ namespace noio.CheatPanel
             string title,
             Action action,
             string preferredHotkeys = "",
-            string category         = "")
-            : base(title, preferredHotkeys, category)
+            int hotkeyPriority = 0,
+            string category = "")
+            : base(title, preferredHotkeys, hotkeyPriority, category)
         {
             Action = action;
         }
@@ -154,7 +171,9 @@ namespace noio.CheatPanel
             string title,
             Action action,
             string preferredHotkeys = "",
-            string category         = "") : base(title, action, preferredHotkeys, category)
+            int hotkeyPriority = 0,
+            string category = ""
+        ) : base(title, action, preferredHotkeys, hotkeyPriority, category)
         {
         }
     }

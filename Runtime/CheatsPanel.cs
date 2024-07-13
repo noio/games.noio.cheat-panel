@@ -245,7 +245,7 @@ namespace noio.CheatPanel
             return page;
         }
 
-        void OpenPage(Page page, bool pushPreviousToStack= true)
+        void OpenPage(Page page, bool pushPreviousToStack = true)
         {
             if (_currentPage != null && pushPreviousToStack)
             {
@@ -304,7 +304,7 @@ namespace noio.CheatPanel
                             {
                                 yield return new CheatActionBinding(title,
                                     () => method.Invoke(component, null),
-                                    cheatAttribute.PreferredHotkeys, category);
+                                    cheatAttribute.PreferredHotkeys, category: category);
                             }
                             else if (cheatBindingEnumerableType.IsAssignableFrom(method.ReturnType))
                             {
@@ -353,7 +353,7 @@ namespace noio.CheatPanel
                                 yield return new CheatBoolBinding(title,
                                     () => (bool)property.GetValue(component),
                                     value => property.SetValue(component, value),
-                                    cheatAttribute.PreferredHotkeys, category);
+                                    cheatAttribute.PreferredHotkeys, category: category);
                             }
 
                             break;
@@ -365,7 +365,7 @@ namespace noio.CheatPanel
 
         void InstantiateUI(Page page)
         {
-            foreach (var binding in page.Bindings.OrderBy(b=>b.Title))
+            foreach (var binding in page.Bindings.OrderBy(b => b.Title))
             {
                 switch (binding)
                 {
@@ -392,10 +392,10 @@ namespace noio.CheatPanel
 
         static void GetTitleAndCategory(
             CheatAttribute attribute,
-            MemberInfo     memberInfo,
-            Component      component,
-            out string     title,
-            out string     category)
+            MemberInfo memberInfo,
+            Component component,
+            out string title,
+            out string category)
         {
             title = string.IsNullOrEmpty(attribute.Title)
                 ? NicifyVariableName(memberInfo.Name)
@@ -432,7 +432,7 @@ namespace noio.CheatPanel
             /*
              * Start with those items that have set a Preferred Hotkey.
              */
-            var orderedBindings = page.Bindings.OrderBy(item => string.IsNullOrEmpty(item.PreferredHotkeys));
+            var orderedBindings = page.Bindings.OrderByDescending(item => item.HotkeyPrioritySortingKey);
             foreach (var binding in orderedBindings)
             {
                 var title = binding.Title.ToUpper();
@@ -542,8 +542,7 @@ namespace noio.CheatPanel
                 {
                     Debug.Log(
                         $"F{Time.frameCount} Run Hotkey \"{char.ToUpper(inputChar)}\": {item.Binding.Title}");
-                    
-                    
+
                     item.Binding.Execute(Keyboard.current.shiftKey.isPressed);
 
                     if (_mode == Mode.Invisible && item.Binding is not CheatOpenPageBinding)
