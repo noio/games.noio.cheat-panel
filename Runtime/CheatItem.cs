@@ -21,6 +21,7 @@ namespace noio.CheatPanel
 
         string _title;
         char _hotkey;
+        CheatsPanel _panel;
 
         #region PROPERTIES
 
@@ -62,15 +63,16 @@ namespace noio.CheatPanel
 
         public void OnCancel(BaseEventData eventData)
         {
-            Binding.Execute(true);
+            _panel.OnCancelAction();
         }
 
         #endregion
 
-        public void Initialize(CheatBinding binding)
+        public void Initialize(CheatBinding binding, CheatsPanel panel)
         {
             Binding = binding;
             InitializeInternal();
+            _panel = panel;
         }
 
 
