@@ -50,8 +50,9 @@ public class CheatsPanel : MonoBehaviour
     /*
      * Build Fields:
      */
-    readonly List<CheatItem> _items = new();
+    readonly List<CheatItem> _currentItems = new();
     readonly List<CheatCategory> _categories = new();
+    readonly List<Page> _pages = new();
     readonly Stack<Page> _pageStack = new();
     Page _currentPage;
     Canvas _canvas;
@@ -64,7 +65,13 @@ public class CheatsPanel : MonoBehaviour
     Mode _mode;
     bool _originalCursorVisible;
     CursorLockMode _originalCursorLockState;
+    float _updateTimer;
+
+    #region PROPERTIES
+
     public static bool IsOpen => _instance != null && _instance._mode == Mode.Open;
+
+    #endregion
 
     #region MONOBEHAVIOUR METHODS
 
@@ -145,7 +152,33 @@ public class CheatsPanel : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        _updateTimer += Time.deltaTime;
+        if (_updateTimer >= 2)
+        {
+            _updateTimer -= 2;
+            foreach (var item in _currentItems)
+            {
+                item.RefreshLabel();
+            }
+        }
+    }
+
     #endregion
+
+    public static void Hide()
+    {
+        if (_instance && _instance._mode == Mode.Open)
+        {
+            _instance.SetMode(Mode.Invisible);
+        }
+    }
+
+    public void OnCancelAction()
+    {
+        ClosePageOrPanel();
+    }
 
     void SetMode(Mode newMode)
     {
@@ -189,14 +222,6 @@ public class CheatsPanel : MonoBehaviour
         }
     }
 
-    public static void Hide()
-    {
-        if (_instance && _instance._mode == Mode.Open)
-        {
-            _instance.SetMode(Mode.Invisible);
-        }
-    }
-
 #if UNITY_EDITOR
 
     #region EDITOR
@@ -234,6 +259,7 @@ public class CheatsPanel : MonoBehaviour
         }
 
         AssignHotkeys(page);
+        _pages.Add(page);
         return page;
     }
 
@@ -243,6 +269,7 @@ public class CheatsPanel : MonoBehaviour
         page.Bindings.AddRange(bindings);
 
         AssignHotkeys(page);
+        _pages.Add(page);
         return page;
     }
 
@@ -260,7 +287,7 @@ public class CheatsPanel : MonoBehaviour
             Destroy(_contentParent.GetChild(i).gameObject);
         }
 
-        _items.Clear();
+        _currentItems.Clear();
         _categories.Clear();
 
         InstantiateUI(page);
@@ -304,8 +331,11 @@ public class CheatsPanel : MonoBehaviour
                         if (method.ReturnType == typeof(void))
                         {
                             yield return new CheatActionBinding(title,
-                                () => method.Invoke(component, null),
-                                preferredHotkeys: cheatAttribute.PreferredHotkeys, category: category);
+                                () => method.Invoke(component, null))
+                            {
+                                PreferredHotkeys = cheatAttribute.PreferredHotkeys,
+                                Category = category
+                            };
                         }
                         else if (cheatBindingEnumerableType.IsAssignableFrom(method.ReturnType))
                         {
@@ -322,17 +352,17 @@ public class CheatsPanel : MonoBehaviour
                             }
                             else
                             {
-                                var openPageBinding = new CheatOpenPageBinding(title,
-                                    preferredHotkeys: cheatAttribute.PreferredHotkeys,
-                                    category: category,
-                                    action:
-                                    () =>
+                                var bindings =
+                                    (IEnumerable<CheatBinding>)method.Invoke(component, null);
+                                var page = CreatePage(bindings);
+
+                                var openPageBinding =
+                                    new CheatOpenPageBinding(title, () => { OpenPage(page); })
                                     {
-                                        var bindings =
-                                            (IEnumerable<CheatBinding>)method.Invoke(component, null);
-                                        var page = CreatePage(bindings);
-                                        OpenPage(page);
-                                    });
+                                        PreferredHotkeys = cheatAttribute.PreferredHotkeys,
+                                        Category = category
+                                    };
+
                                 yield return openPageBinding;
                             }
                         }
@@ -345,16 +375,23 @@ public class CheatsPanel : MonoBehaviour
                         {
                             yield return new CheatFloatBinding(title,
                                 () => (float)property.GetValue(component),
-                                value => property.SetValue(component, value),
-                                cheatAttribute.Min, cheatAttribute.Max,
-                                cheatAttribute.PreferredHotkeys, category);
+                                value => property.SetValue(component, value))
+                            {
+                                Min = cheatAttribute.Min,
+                                Max = cheatAttribute.Max,
+                                PreferredHotkeys = cheatAttribute.PreferredHotkeys,
+                                Category = category
+                            };
                         }
                         else if (property.PropertyType == typeof(bool))
                         {
                             yield return new CheatBoolBinding(title,
                                 () => (bool)property.GetValue(component),
-                                value => property.SetValue(component, value),
-                                cheatAttribute.PreferredHotkeys, category: category);
+                                value => property.SetValue(component, value))
+                            {
+                                PreferredHotkeys = cheatAttribute.PreferredHotkeys,
+                                Category = category
+                            };
                         }
 
                         break;
@@ -366,7 +403,7 @@ public class CheatsPanel : MonoBehaviour
 
     void InstantiateUI(Page page)
     {
-        foreach (var binding in page.Bindings.OrderBy(b => b.Title))
+        foreach (var binding in page.Bindings.OrderBy(b => b.Label))
         {
             switch (binding)
             {
@@ -421,10 +458,10 @@ public class CheatsPanel : MonoBehaviour
 
         // item.HueTint = (member.DeclaringType.Name.GetHashCode() / (float)int.MaxValue) * .5f + .5f;
 
-        item.name = binding.Title;
+        item.name = binding.Label;
         item.RefreshLabel();
 
-        _items.Add(item);
+        _currentItems.Add(item);
         return item;
     }
 
@@ -437,7 +474,7 @@ public class CheatsPanel : MonoBehaviour
         var orderedBindings = page.Bindings.OrderByDescending(item => item.HotkeyPrioritySortingKey);
         foreach (var binding in orderedBindings)
         {
-            var title = binding.Title.ToUpper();
+            var title = binding.Label.ToUpper();
 
             var possibleBindings = (binding.PreferredHotkeys + title + _hotkeys).ToUpper();
 
@@ -513,15 +550,10 @@ public class CheatsPanel : MonoBehaviour
 
     void SelectFirstButton()
     {
-        if (_items.Count > 0)
+        if (_currentItems.Count > 0)
         {
-            EventSystem.current.SetSelectedGameObject(_items[0].gameObject);
+            EventSystem.current.SetSelectedGameObject(_currentItems[0].gameObject);
         }
-    }
-
-    public void OnCancelAction()
-    {
-        ClosePageOrPanel();
     }
 
     #region EVENT HANDLERS
@@ -544,11 +576,11 @@ public class CheatsPanel : MonoBehaviour
              * to create the actual UI objects if the panel is closed!
              * Then the "CheatOpenPageBinding" could just point to the path of the page it wants to open
              */
-            var item = _items.FirstOrDefault(a => a.Binding.Hotkey == char.ToUpper(inputChar));
+            var item = _currentItems.FirstOrDefault(a => a.Binding.Hotkey == char.ToUpper(inputChar));
             if (item != null)
             {
                 Debug.Log(
-                    $"F{Time.frameCount} Run Hotkey \"{char.ToUpper(inputChar)}\": {item.Binding.Title}");
+                    $"F{Time.frameCount} Run Hotkey \"{char.ToUpper(inputChar)}\": {item.Binding.Label}");
 
                 item.Binding.Execute(Keyboard.current.shiftKey.isPressed);
 

@@ -2,6 +2,7 @@
 // Thomas van den Berg
 
 using System;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace noio.CheatPanel
@@ -17,7 +18,11 @@ namespace noio.CheatPanel
         void Awake()
         {
             _button = GetComponent<Button>();
-            _button.onClick.AddListener(() => Binding.Execute());
+            _button.onClick.AddListener(() =>
+            {
+                Binding.Execute(Keyboard.current.shiftKey.isPressed);
+                RefreshLabel();
+            });
         }
 
         #endregion

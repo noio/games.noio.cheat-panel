@@ -8,26 +8,24 @@ namespace noio.CheatPanel
 {
 public abstract class CheatBinding
 {
-    public CheatBinding(
-        string title,
-        string preferredHotkeys = "",
-        int hotkeyPriority = 0,
-        string category = ""
-    )
+    public CheatBinding(string label)
     {
-        Title = title;
-        PreferredHotkeys = preferredHotkeys;
-        HotkeyPriority = hotkeyPriority;
-        Category = category;
+        Label = label;
     }
 
     #region PROPERTIES
 
-    public string Title { get; set; }
-    public string PreferredHotkeys { get; set; }
-    public int HotkeyPriority { get; set; }
-    public string Category { get; }
+    public string Label { get; set; }
+    public string PreferredHotkeys { get; set; } = "";
+    public int HotkeyPriority { get; set; } = 0;
+    public string Category { get; set; } = "";
     public char Hotkey { get; private set; }
+
+    /// <summary>
+    ///     Method that will be called after every interaction with the button to
+    ///     update the label
+    /// </summary>
+    public Func<string> LabelGetter { get; set; }
 
     /// <summary>
     ///     Returns a priority sorting key for this binding. Bindings with preferred hotkeys
@@ -52,29 +50,22 @@ public abstract class CheatBinding<T> : CheatBinding where T : struct
     public event Action ValueChanged;
 
     public CheatBinding(
-        string title,
+        string label,
         Func<T> getValue,
-        Action<T> setValue,
-        float min = 0,
-        float max = 10,
-        string preferredHotkeys = "",
-        int hotkeyPriority = 0,
-        string category = ""
+        Action<T> setValue
     )
-        : base(title, preferredHotkeys, hotkeyPriority, category)
+        : base(label)
     {
         GetValue = getValue;
         SetValue = setValue;
-        Min = min;
-        Max = max;
     }
 
     #region PROPERTIES
 
     Func<T> GetValue { get; }
     Action<T> SetValue { get; }
-    public float Min { get; set; }
-    public float Max { get; set; }
+    public float Min { get; set; } = 0;
+    public float Max { get; set; } = 10;
 
     public T Value
     {
@@ -92,24 +83,21 @@ public abstract class CheatBinding<T> : CheatBinding where T : struct
 public class CheatFloatBinding : CheatBinding<float>
 {
     public CheatFloatBinding(
-        string title,
+        string label,
         Func<float> getValue,
-        Action<float> setValue,
-        float min,
-        float max,
-        string preferredHotkeys = "",
-        string category = "",
-        int hotkeyPriority = 0
+        Action<float> setValue
     ) :
-        base(title, getValue, setValue,
-            min, max, preferredHotkeys, hotkeyPriority, category)
+        base(label, getValue, setValue)
     {
     }
+
+    public float Increments { get; set; }= 0;
 
     public override void Execute(bool shift)
     {
         var value = Value;
-        var incr = (Max - Min) * .1f;
+        float incr = Increments == 0 ? (Max - Min) * .1f : Increments;
+
         if (shift)
         {
             incr = -incr;
@@ -122,14 +110,11 @@ public class CheatFloatBinding : CheatBinding<float>
 public class CheatBoolBinding : CheatBinding<bool>
 {
     public CheatBoolBinding(
-        string title,
+        string label,
         Func<bool> getValue,
-        Action<bool> setValue,
-        string preferredHotkeys = "",
-        int hotkeyPriority = 0,
-        string category = ""
+        Action<bool> setValue
     )
-        : base(title, getValue, setValue, 0, 1, preferredHotkeys, hotkeyPriority, category)
+        : base(label, getValue, setValue)
     {
     }
 
@@ -149,14 +134,11 @@ public class CheatBoolBinding : CheatBinding<bool>
 public class CheatActionBinding : CheatBinding
 {
     public CheatActionBinding(
-        string title,
+        string label,
         Action action,
-        Action altAction = null,
-        string preferredHotkeys = "",
-        int hotkeyPriority = 0,
-        string category = ""
+        Action altAction = null
     )
-        : base(title, preferredHotkeys, hotkeyPriority, category)
+        : base(label)
     {
         Action = action;
         AltAction = altAction;
@@ -185,12 +167,9 @@ public class CheatActionBinding : CheatBinding
 public class CheatOpenPageBinding : CheatActionBinding
 {
     public CheatOpenPageBinding(
-        string title,
-        Action action,
-        string preferredHotkeys = "",
-        int hotkeyPriority = 0,
-        string category = ""
-    ) : base(title, action, null, preferredHotkeys, hotkeyPriority, category)
+        string label,
+        Action action
+    ) : base(label, action)
     {
     }
 }

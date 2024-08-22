@@ -22,6 +22,7 @@ namespace noio.CheatPanel
         string _title;
         char _hotkey;
         CheatsPanel _panel;
+        bool _didSetLabelOnce;
 
         #region PROPERTIES
 
@@ -78,26 +79,37 @@ namespace noio.CheatPanel
 
         public void RefreshLabel()
         {
-            string label;
+            /*
+             * If this binding doesn't have a dynamic label, we only need to set once:
+             */
+            if (_didSetLabelOnce && Binding.LabelGetter == null)
+            {
+                return;
+            }
+            
+            string label = Binding.LabelGetter != null ? Binding.LabelGetter() : Binding.Label;
+            
             var hotkey = Binding.Hotkey;
-            if (hotkey == default)
+            
+            if (hotkey != default)
             {
-                label = Binding.Title;
-            }
-            else if (Binding.Title.Contains(hotkey, StringComparison.CurrentCultureIgnoreCase))
-            {
-                var rx = new Regex($"({hotkey})", RegexOptions.IgnoreCase);
+                if (label.Contains(hotkey, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    var rx = new Regex($"({hotkey})", RegexOptions.IgnoreCase);
 
-                // label = rx.Replace(Title, "<b><u>$1</u></b>", 1);
-                label = rx.Replace(Binding.Title, "<u>$1</u>", 1);
-            }
-            else
-            {
-                // label = $"{Title} [<b><u>{hotkey}</u></b>]";
-                label = $"{Binding.Title} [<u>{hotkey}</u>]";
+                    // label = rx.Replace(Title, "<b><u>$1</u></b>", 1);
+                    label = rx.Replace(label, "<u>$1</u>", 1);
+                }
+                else
+                {
+                    // label = $"{Title} [<b><u>{hotkey}</u></b>]";
+                    label = $"{label} [<u>{hotkey}</u>]";
+                }
             }
 
+            // label = Binding.Title;
             _label.text = label;
+            _didSetLabelOnce = true;
         }
 
         protected virtual void InitializeInternal()
