@@ -305,7 +305,7 @@ public class CheatsPanel : MonoBehaviour
                         {
                             yield return new CheatActionBinding(title,
                                 () => method.Invoke(component, null),
-                                cheatAttribute.PreferredHotkeys, category: category);
+                                preferredHotkeys: cheatAttribute.PreferredHotkeys, category: category);
                         }
                         else if (cheatBindingEnumerableType.IsAssignableFrom(method.ReturnType))
                         {

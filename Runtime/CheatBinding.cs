@@ -6,175 +6,192 @@ using UnityEngine;
 
 namespace noio.CheatPanel
 {
-    public abstract class CheatBinding
+public abstract class CheatBinding
+{
+    public CheatBinding(
+        string title,
+        string preferredHotkeys = "",
+        int hotkeyPriority = 0,
+        string category = ""
+    )
     {
-        public CheatBinding(
-            string title,
-            string preferredHotkeys = "",
-            int hotkeyPriority = 0,
-            string category = "")
-        {
-            Title = title;
-            PreferredHotkeys = preferredHotkeys;
-            HotkeyPriority = hotkeyPriority;
-            Category = category;
-        }
-
-        #region PROPERTIES
-
-        public string Title { get; set; }
-        public string PreferredHotkeys { get; set; }
-        public int HotkeyPriority { get; set; }
-        public string Category { get; }
-        public char Hotkey { get; private set; }
-
-        /// <summary>
-        ///     Returns a priority sorting key for this binding. Bindings with preferred hotkeys
-        ///     set are always sorted to a higher priority. Otherwise just returns the
-        ///     manually set HotkeyPriority
-        /// </summary>
-        public int HotkeyPrioritySortingKey =>
-            HotkeyPriority + (string.IsNullOrEmpty(PreferredHotkeys) ? 0 : 1000);
-
-        #endregion
-
-        public void SetHotkey(char c)
-        {
-            Hotkey = c;
-        }
-
-        public abstract void Execute(bool shift = false);
+        Title = title;
+        PreferredHotkeys = preferredHotkeys;
+        HotkeyPriority = hotkeyPriority;
+        Category = category;
     }
 
-    public abstract class CheatBinding<T> : CheatBinding where T : struct
+    #region PROPERTIES
+
+    public string Title { get; set; }
+    public string PreferredHotkeys { get; set; }
+    public int HotkeyPriority { get; set; }
+    public string Category { get; }
+    public char Hotkey { get; private set; }
+
+    /// <summary>
+    ///     Returns a priority sorting key for this binding. Bindings with preferred hotkeys
+    ///     set are always sorted to a higher priority. Otherwise just returns the
+    ///     manually set HotkeyPriority
+    /// </summary>
+    public int HotkeyPrioritySortingKey =>
+        HotkeyPriority + (string.IsNullOrEmpty(PreferredHotkeys) ? 0 : 1000);
+
+    #endregion
+
+    public void SetHotkey(char c)
     {
-        public event Action ValueChanged;
-
-        public CheatBinding(string title,
-            Func<T> getValue,
-            Action<T> setValue,
-            float min = 0,
-            float max = 10,
-            string preferredHotkeys = "",
-            int hotkeyPriority = 0,
-            string category = "")
-            : base(title, preferredHotkeys, hotkeyPriority, category)
-        {
-            GetValue = getValue;
-            SetValue = setValue;
-            Min = min;
-            Max = max;
-        }
-
-        #region PROPERTIES
-
-        Func<T> GetValue { get; }
-        Action<T> SetValue { get; }
-        public float Min { get; set; }
-        public float Max { get; set; }
-
-        public T Value
-        {
-            get => GetValue();
-            set
-            {
-                SetValue(value);
-                ValueChanged?.Invoke();
-            }
-        }
-
-        #endregion
+        Hotkey = c;
     }
 
-    public class CheatFloatBinding : CheatBinding<float>
+    public abstract void Execute(bool shift = false);
+}
+
+public abstract class CheatBinding<T> : CheatBinding where T : struct
+{
+    public event Action ValueChanged;
+
+    public CheatBinding(
+        string title,
+        Func<T> getValue,
+        Action<T> setValue,
+        float min = 0,
+        float max = 10,
+        string preferredHotkeys = "",
+        int hotkeyPriority = 0,
+        string category = ""
+    )
+        : base(title, preferredHotkeys, hotkeyPriority, category)
     {
-        public CheatFloatBinding(string title,
-            Func<float> getValue,
-            Action<float> setValue,
-            float min,
-            float max,
-            string preferredHotkeys = "",
-            string category = "",
-            int hotkeyPriority = 0) :
-            base(title, getValue, setValue,
-                min, max, preferredHotkeys, hotkeyPriority, category)
-        {
-        }
+        GetValue = getValue;
+        SetValue = setValue;
+        Min = min;
+        Max = max;
+    }
 
-        public override void Execute(bool shift)
-        {
-            var value = Value;
-            var incr = (Max - Min) * .1f;
-            if (shift)
-            {
-                incr = -incr;
-            }
+    #region PROPERTIES
 
-            Value = Mathf.Clamp(value + incr, Min, Max);
+    Func<T> GetValue { get; }
+    Action<T> SetValue { get; }
+    public float Min { get; set; }
+    public float Max { get; set; }
+
+    public T Value
+    {
+        get => GetValue();
+        set
+        {
+            SetValue(value);
+            ValueChanged?.Invoke();
         }
     }
 
-    public class CheatBoolBinding : CheatBinding<bool>
-    {
-        public CheatBoolBinding(
-            string title,
-            Func<bool> getValue,
-            Action<bool> setValue,
-            string preferredHotkeys = "",
-            int hotkeyPriority = 0,
-            string category = "")
-            : base(title, getValue, setValue, 0, 1, preferredHotkeys, hotkeyPriority, category)
-        {
-        }
+    #endregion
+}
 
-        public override void Execute(bool shift)
-        {
-            if (shift)
-            {
-                Value = false;
-            }
-            else
-            {
-                Value = !Value;
-            }
-        }
+public class CheatFloatBinding : CheatBinding<float>
+{
+    public CheatFloatBinding(
+        string title,
+        Func<float> getValue,
+        Action<float> setValue,
+        float min,
+        float max,
+        string preferredHotkeys = "",
+        string category = "",
+        int hotkeyPriority = 0
+    ) :
+        base(title, getValue, setValue,
+            min, max, preferredHotkeys, hotkeyPriority, category)
+    {
     }
 
-    public class CheatActionBinding : CheatBinding
+    public override void Execute(bool shift)
     {
-        public CheatActionBinding(
-            string title,
-            Action action,
-            string preferredHotkeys = "",
-            int hotkeyPriority = 0,
-            string category = "")
-            : base(title, preferredHotkeys, hotkeyPriority, category)
+        var value = Value;
+        var incr = (Max - Min) * .1f;
+        if (shift)
         {
-            Action = action;
+            incr = -incr;
         }
 
-        #region PROPERTIES
+        Value = Mathf.Clamp(value + incr, Min, Max);
+    }
+}
 
-        public Action Action { get; }
+public class CheatBoolBinding : CheatBinding<bool>
+{
+    public CheatBoolBinding(
+        string title,
+        Func<bool> getValue,
+        Action<bool> setValue,
+        string preferredHotkeys = "",
+        int hotkeyPriority = 0,
+        string category = ""
+    )
+        : base(title, getValue, setValue, 0, 1, preferredHotkeys, hotkeyPriority, category)
+    {
+    }
 
-        #endregion
+    public override void Execute(bool shift)
+    {
+        if (shift)
+        {
+            Value = false;
+        }
+        else
+        {
+            Value = !Value;
+        }
+    }
+}
 
-        public override void Execute(bool shift)
+public class CheatActionBinding : CheatBinding
+{
+    public CheatActionBinding(
+        string title,
+        Action action,
+        Action altAction = null,
+        string preferredHotkeys = "",
+        int hotkeyPriority = 0,
+        string category = ""
+    )
+        : base(title, preferredHotkeys, hotkeyPriority, category)
+    {
+        Action = action;
+        AltAction = altAction;
+    }
+
+    #region PROPERTIES
+
+    public Action Action { get; }
+    public Action AltAction { get; }
+
+    #endregion
+
+    public override void Execute(bool shift)
+    {
+        if (shift)
+        {
+            AltAction?.Invoke();
+        }
+        else
         {
             Action?.Invoke();
         }
     }
+}
 
-    public class CheatOpenPageBinding : CheatActionBinding
+public class CheatOpenPageBinding : CheatActionBinding
+{
+    public CheatOpenPageBinding(
+        string title,
+        Action action,
+        string preferredHotkeys = "",
+        int hotkeyPriority = 0,
+        string category = ""
+    ) : base(title, action, null, preferredHotkeys, hotkeyPriority, category)
     {
-        public CheatOpenPageBinding(
-            string title,
-            Action action,
-            string preferredHotkeys = "",
-            int hotkeyPriority = 0,
-            string category = ""
-        ) : base(title, action, preferredHotkeys, hotkeyPriority, category)
-        {
-        }
     }
+}
 }
