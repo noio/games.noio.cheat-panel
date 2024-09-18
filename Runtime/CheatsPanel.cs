@@ -317,8 +317,8 @@ public class CheatsPanel : MonoBehaviour
             if (member.GetCustomAttribute(typeof(CheatAttribute), false) is
                 CheatAttribute cheatAttribute)
             {
-                GetTitleAndCategory(cheatAttribute, member, component,
-                    out var title, out var category);
+                GetLabelAndCategory(cheatAttribute, member, component,
+                    out var label, out var category);
 
                 switch (member)
                 {
@@ -330,11 +330,17 @@ public class CheatsPanel : MonoBehaviour
                          */
                         if (method.ReturnType == typeof(void))
                         {
-                            yield return new CheatActionBinding(title,
-                                () => method.Invoke(component, null))
+                            var labelGetterMethodName = method.Name + "Label";
+                            var labelGetterMethod = type.GetMethods().FirstOrDefault(m =>
+                                m.Name == labelGetterMethodName && m.ReturnType == typeof(string));
+
+                            yield return new CheatActionBinding(label, () => method.Invoke(component, null))
                             {
                                 PreferredHotkeys = cheatAttribute.PreferredHotkeys,
-                                Category = category
+                                Category = category,
+                                LabelGetter = labelGetterMethod != null
+                                    ? () => labelGetterMethod.Invoke(component, null) as string
+                                    : null
                             };
                         }
                         else if (cheatBindingEnumerableType.IsAssignableFrom(method.ReturnType))
@@ -357,7 +363,7 @@ public class CheatsPanel : MonoBehaviour
                                 var page = CreatePage(bindings);
 
                                 var openPageBinding =
-                                    new CheatOpenPageBinding(title, () => { OpenPage(page); })
+                                    new CheatOpenPageBinding(label, () => { OpenPage(page); })
                                     {
                                         PreferredHotkeys = cheatAttribute.PreferredHotkeys,
                                         Category = category
@@ -373,7 +379,7 @@ public class CheatsPanel : MonoBehaviour
                     {
                         if (property.PropertyType == typeof(float))
                         {
-                            yield return new CheatFloatBinding(title,
+                            yield return new CheatFloatBinding(label,
                                 () => (float)property.GetValue(component),
                                 value => property.SetValue(component, value))
                             {
@@ -385,7 +391,7 @@ public class CheatsPanel : MonoBehaviour
                         }
                         else if (property.PropertyType == typeof(bool))
                         {
-                            yield return new CheatBoolBinding(title,
+                            yield return new CheatBoolBinding(label,
                                 () => (bool)property.GetValue(component),
                                 value => property.SetValue(component, value))
                             {
@@ -428,7 +434,7 @@ public class CheatsPanel : MonoBehaviour
         return category;
     }
 
-    static void GetTitleAndCategory(
+    static void GetLabelAndCategory(
         CheatAttribute attribute,
         MemberInfo memberInfo,
         Component component,
@@ -436,9 +442,9 @@ public class CheatsPanel : MonoBehaviour
         out string category
     )
     {
-        title = string.IsNullOrEmpty(attribute.Title)
+        title = string.IsNullOrEmpty(attribute.Label)
             ? NicifyVariableName(memberInfo.Name)
-            : attribute.Title;
+            : attribute.Label;
         category = string.IsNullOrEmpty(attribute.Category)
             ? NicifyVariableName(component.name)
             : attribute.Category;
