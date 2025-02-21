@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace noio.CheatPanel
 {
-    internal class CheatToggle : CheatItem
+    internal class CheatToggle : CheatUIElementBase
     {
         #region SERIALIZED FIELDS
 
@@ -46,7 +46,7 @@ namespace noio.CheatPanel
 
         void SetValueLabel()
         {
-            _valueLabel.text = Value ? "ON" : "OFF";
+            _valueLabel.text = Value ? "YES" : "no";
         }
     }
 }

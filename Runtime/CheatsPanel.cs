@@ -1,4 +1,4 @@
-// (C)2024 @noio_games
+// (C)2025 @noio_games
 // Thomas van den Berg
 
 using System;
@@ -11,11 +11,13 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace noio.CheatPanel
 {
 public class CheatsPanel : MonoBehaviour
 {
+    const string HomePageTitle = "Home";
     static CheatsPanel _instance;
 
     #region SERIALIZED FIELDS
@@ -50,9 +52,8 @@ public class CheatsPanel : MonoBehaviour
     /*
      * Build Fields:
      */
-    readonly List<CheatItem> _currentItems = new();
-    readonly List<CheatCategory> _categories = new();
-    readonly List<Page> _pages = new();
+    // readonly List<CheatUIElementBase> _currentItems = new();
+    readonly Dictionary<string, Page> _pages = new();
     readonly Stack<Page> _pageStack = new();
     Page _currentPage;
     Canvas _canvas;
@@ -66,6 +67,7 @@ public class CheatsPanel : MonoBehaviour
     bool _originalCursorVisible;
     CursorLockMode _originalCursorLockState;
     float _updateTimer;
+    Vector2 _canvasSize;
 
     #region PROPERTIES
 
@@ -131,8 +133,56 @@ public class CheatsPanel : MonoBehaviour
 
     void Start()
     {
-        var firstPage = CreatePage(_bindToObjects);
-        OpenPage(firstPage);
+        var homePage = new Page(HomePageTitle);
+        _pages.Add(HomePageTitle, homePage);
+
+        foreach (var go in _bindToObjects)
+        {
+            if (go != null)
+            {
+                foreach (var component in go.GetComponents<Component>())
+                {
+                    AddBindings(CreateBindingsForComponent(component));
+                }
+            }
+        }
+
+        /*
+         * Check if every page (except home) has a corresponding OpenPage action
+         */
+        foreach (var page in _pages.Values)
+        {
+            var pageTitle = page.Title;
+            CreateOpenPageBinding(pageTitle);
+        }
+
+        foreach (var page in _pages.Values)
+        {
+            SortAndAssignHotkeys(page);
+        }
+
+        OpenPage(_pages[HomePageTitle]);
+    }
+
+    void CreateOpenPageBinding(string pageTitle, string preferredHotkeys = null)
+    {
+        if (pageTitle == HomePageTitle)
+        {
+            return;
+        }
+
+        var homePage = _pages[HomePageTitle];
+        var openPageBinding = homePage.Bindings.FirstOrDefault(b =>
+            b is CheatOpenPageBinding openPageBinding && openPageBinding.OpenPageWithTitle == pageTitle);
+
+        if (openPageBinding == null)
+        {
+            homePage.Bindings.Add(new CheatOpenPageBinding(pageTitle, () => OpenPage(pageTitle))
+            {
+                Category = "_Pages",
+                PreferredHotkeys = preferredHotkeys
+            });
+        }
     }
 
     void OnEnable()
@@ -142,6 +192,8 @@ public class CheatsPanel : MonoBehaviour
             Keyboard.current.onTextInput -= HandleTextInput;
             Keyboard.current.onTextInput += HandleTextInput;
         }
+
+        Canvas.preWillRenderCanvases += HandlePreWillRenderCanvases;
     }
 
     void OnDisable()
@@ -150,6 +202,8 @@ public class CheatsPanel : MonoBehaviour
         {
             Keyboard.current.onTextInput -= HandleTextInput;
         }
+
+        Canvas.preWillRenderCanvases -= HandlePreWillRenderCanvases;
     }
 
     void Update()
@@ -158,9 +212,9 @@ public class CheatsPanel : MonoBehaviour
         if (_updateTimer >= 2)
         {
             _updateTimer -= 2;
-            foreach (var item in _currentItems)
+            foreach (var binding in _currentPage.Bindings)
             {
-                item.RefreshLabel();
+                binding.RefreshLabel();
             }
         }
     }
@@ -245,36 +299,41 @@ public class CheatsPanel : MonoBehaviour
         _isQuitting = true;
     }
 
-    Page CreatePage(GameObject[] fromObjects)
+    /// <summary>
+    /// When calling this, the bindings must have pages and categories set.
+    /// </summary>
+    /// <param name="bindings"></param>
+    void AddBindings(IEnumerable<CheatBinding> bindings)
     {
-        var page = new Page();
-
-        foreach (var go in fromObjects)
+        foreach (var binding in bindings)
         {
-            foreach (var component in go.GetComponents<Component>())
+            var pageName = binding.Page;
+            if (string.IsNullOrEmpty(pageName))
             {
-                var bindings = CreateBindingsFromAttributes(component);
-                page.Bindings.AddRange(bindings);
+                pageName = HomePageTitle;
             }
-        }
 
-        AssignHotkeys(page);
-        _pages.Add(page);
-        return page;
+            if (_pages.TryGetValue(pageName, out var page) == false)
+            {
+                page = _pages[pageName] = new Page(pageName);
+            }
+
+            page.Bindings.Add(binding);
+        }
     }
 
-    Page CreatePage(IEnumerable<CheatBinding> bindings)
+    void OpenPage(string pageTitle, bool pushPreviousToStack = true)
     {
-        var page = new Page();
-        page.Bindings.AddRange(bindings);
-
-        AssignHotkeys(page);
-        _pages.Add(page);
-        return page;
+        if (_pages.ContainsKey(pageTitle))
+        {
+            OpenPage(_pages[pageTitle], pushPreviousToStack);
+        }
     }
 
     void OpenPage(Page page, bool pushPreviousToStack = true)
     {
+        SetPageCategoriesActive(_currentPage, false);
+
         if (_currentPage != null && pushPreviousToStack)
         {
             _pageStack.Push(_currentPage);
@@ -282,15 +341,25 @@ public class CheatsPanel : MonoBehaviour
 
         _currentPage = page;
 
-        for (var i = _contentParent.childCount - 1; i >= 0; i--)
+        if (_currentPage.Bindings.Count > 0 && _currentPage.Categories.Count == 0)
         {
-            Destroy(_contentParent.GetChild(i).gameObject);
+            BuildPageUI(_currentPage);
         }
 
-        _currentItems.Clear();
-        _categories.Clear();
+        SetPageCategoriesActive(_currentPage, true);
+    }
 
-        InstantiateUI(page);
+    void SetPageCategoriesActive(Page page, bool value)
+    {
+        if (page == null)
+        {
+            return;
+        }
+
+        foreach (var category in page.Categories)
+        {
+            category.gameObject.SetActive(value);
+        }
     }
 
     void CloseCurrentPage()
@@ -307,7 +376,7 @@ public class CheatsPanel : MonoBehaviour
         }
     }
 
-    IEnumerable<CheatBinding> CreateBindingsFromAttributes(Component component)
+    IEnumerable<CheatBinding> CreateBindingsForComponent(Component component)
     {
         var cheatBindingEnumerableType = typeof(IEnumerable<CheatBinding>);
 
@@ -317,8 +386,24 @@ public class CheatsPanel : MonoBehaviour
             if (member.GetCustomAttribute(typeof(CheatAttribute), false) is
                 CheatAttribute cheatAttribute)
             {
-                GetLabelAndCategory(cheatAttribute, member, component,
-                    out var label, out var category);
+                /*
+                 * Assign to home page by default, unless title is passed in CheatAttribute
+                 */
+                var page = string.IsNullOrEmpty(cheatAttribute.Page)
+                    ? HomePageTitle
+                    : cheatAttribute.Page;
+
+                /*
+                 * If no category is passed in CheatAttribute, assign page name,
+                 * except on home page: assign component name
+                 */
+                var category = string.IsNullOrEmpty(cheatAttribute.Category)
+                    ? page == HomePageTitle ? component.name : page
+                    : cheatAttribute.Category;
+
+                var label = string.IsNullOrEmpty(cheatAttribute.Label)
+                    ? NicifyVariableName(member.Name)
+                    : cheatAttribute.Label;
 
                 switch (member)
                 {
@@ -337,6 +422,7 @@ public class CheatsPanel : MonoBehaviour
                             yield return new CheatActionBinding(label, () => method.Invoke(component, null))
                             {
                                 PreferredHotkeys = cheatAttribute.PreferredHotkeys,
+                                Page = page,
                                 Category = category,
                                 LabelGetter = labelGetterMethod != null
                                     ? () => labelGetterMethod.Invoke(component, null) as string
@@ -345,31 +431,29 @@ public class CheatsPanel : MonoBehaviour
                         }
                         else if (cheatBindingEnumerableType.IsAssignableFrom(method.ReturnType))
                         {
-                            if (cheatAttribute.NewPage == false)
+                            var bindings = (IEnumerable<CheatBinding>)method.Invoke(component, null);
+                            foreach (var binding in bindings)
                             {
                                 /*
-                                 * Just add sub-bindings to the current page
+                                 * Assign Page and Category from the Attribute
+                                 * (unless the returned binding overrides it)
                                  */
-                                var bindings = (IEnumerable<CheatBinding>)method.Invoke(component, null);
-                                foreach (var binding in bindings)
+                                if (string.IsNullOrEmpty(binding.Page))
                                 {
-                                    yield return binding;
+                                    binding.Page = page;
                                 }
+
+                                if (string.IsNullOrEmpty(binding.Category))
+                                {
+                                    binding.Category = category;
+                                }
+
+                                yield return binding;
                             }
-                            else
+
+                            if (string.IsNullOrEmpty(cheatAttribute.PreferredHotkeys) == false)
                             {
-                                var bindings =
-                                    (IEnumerable<CheatBinding>)method.Invoke(component, null);
-                                var page = CreatePage(bindings);
-
-                                var openPageBinding =
-                                    new CheatOpenPageBinding(label, () => { OpenPage(page); })
-                                    {
-                                        PreferredHotkeys = cheatAttribute.PreferredHotkeys,
-                                        Category = category
-                                    };
-
-                                yield return openPageBinding;
+                                CreateOpenPageBinding(page, cheatAttribute.PreferredHotkeys);
                             }
                         }
 
@@ -407,78 +491,54 @@ public class CheatsPanel : MonoBehaviour
         }
     }
 
-    void InstantiateUI(Page page)
+    void BuildPageUI(Page page)
     {
-        foreach (var binding in page.Bindings.OrderBy(b => b.Label))
+        foreach (var binding in page.Bindings.OrderBy(b => (b.Category, b.Label)))
         {
             switch (binding)
             {
                 case CheatBinding<float> floatBinding:
-                    InstantiateItem(_sliderPrefab, floatBinding);
+                    InstantiateUIElement(_sliderPrefab, floatBinding, page);
                     break;
                 case CheatBinding<bool> boolBinding:
-                    InstantiateItem(_togglePrefab, boolBinding);
+                    InstantiateUIElement(_togglePrefab, boolBinding, page);
                     break;
                 case CheatActionBinding actionBinding:
-                    InstantiateItem(_buttonPrefab, actionBinding);
+                    InstantiateUIElement(_buttonPrefab, actionBinding, page);
                     break;
             }
         }
+
+        page.Categories.Sort((c1, c2) => string.Compare(c1.Title, c2.Title, StringComparison.Ordinal));
+
+        UpdateCategoryGridHeights();
     }
 
-    CheatCategory InstantiateCategory(string title)
+    T InstantiateUIElement<T>(T prefab, CheatBinding binding, Page page) where T : CheatUIElementBase
     {
-        var category = Instantiate(_categoryPrefab, _contentParent);
-        category.Title = title;
-
-        return category;
-    }
-
-    static void GetLabelAndCategory(
-        CheatAttribute attribute,
-        MemberInfo memberInfo,
-        Component component,
-        out string title,
-        out string category
-    )
-    {
-        title = string.IsNullOrEmpty(attribute.Label)
-            ? NicifyVariableName(memberInfo.Name)
-            : attribute.Label;
-        category = string.IsNullOrEmpty(attribute.Category)
-            ? NicifyVariableName(component.name)
-            : attribute.Category;
-    }
-
-    T InstantiateItem<T>(T prefab, CheatBinding binding) where T : CheatItem
-    {
-        var category = _categories.FirstOrDefault(c => c.Title == binding.Category);
+        var category = page.Categories.FirstOrDefault(c => c.Title == binding.Category);
         if (category == null)
         {
-            category = InstantiateCategory(binding.Category);
-            _categories.Add(category);
+            category = Instantiate(_categoryPrefab, _contentParent);
+            category.Title = binding.Category;
+            page.Categories.Add(category);
         }
 
-        var item = Instantiate(prefab, category.ContentParent);
-        item.Initialize(binding, this);
-
-        // item.HueTint = (member.DeclaringType.Name.GetHashCode() / (float)int.MaxValue) * .5f + .5f;
-
-        item.name = binding.Label;
-        item.RefreshLabel();
-
-        _currentItems.Add(item);
-        return item;
+        var uiElement = Instantiate(prefab, category.ContentParent);
+        uiElement.Initialize(binding, this);
+        return uiElement;
     }
 
-    void AssignHotkeys(Page page)
+    void SortAndAssignHotkeys(Page page)
     {
         var occupiedHotkeys = "";
         /*
          * Start with those items that have set a Preferred Hotkey.
          */
-        var orderedBindings = page.Bindings.OrderByDescending(item => item.HotkeyPrioritySortingKey);
-        foreach (var binding in orderedBindings)
+        page.Bindings.Sort(((a, b) => a.HotkeyPrioritySortingKey.CompareTo(b.HotkeyPrioritySortingKey)));
+
+        // var orderedBindings = page.Bindings.OrderBy(item => item.HotkeyPrioritySortingKey);
+        foreach (var binding in page.Bindings)
         {
             var title = binding.Label.ToUpper();
 
@@ -556,13 +616,31 @@ public class CheatsPanel : MonoBehaviour
 
     void SelectFirstButton()
     {
-        if (_currentItems.Count > 0)
+        EventSystem.current.SetSelectedGameObject(_currentPage.Categories[0]
+                                                              .GetComponentInChildren<Selectable>()
+                                                              .gameObject);
+    }
+
+    void UpdateCategoryGridHeights()
+    {
+        foreach (var category in _currentPage.Categories)
         {
-            EventSystem.current.SetSelectedGameObject(_currentItems[0].gameObject);
+            category.UpdateGridHeight();
         }
     }
 
     #region EVENT HANDLERS
+
+    void HandlePreWillRenderCanvases()
+    {
+        var newRes = _canvas.renderingDisplaySize;
+        if (Math.Abs(newRes.x - _canvasSize.x) > .5f || Math.Abs(newRes.y - _canvasSize.y) > .5f)
+        {
+            _canvasSize = newRes;
+
+            UpdateCategoryGridHeights();
+        }
+    }
 
     void HandleTextInput(char inputChar)
     {
@@ -582,15 +660,15 @@ public class CheatsPanel : MonoBehaviour
              * to create the actual UI objects if the panel is closed!
              * Then the "CheatOpenPageBinding" could just point to the path of the page it wants to open
              */
-            var item = _currentItems.FirstOrDefault(a => a.Binding.Hotkey == char.ToUpper(inputChar));
-            if (item != null)
+            var binding = _currentPage.Bindings.FirstOrDefault(b => b.Hotkey == char.ToUpper(inputChar));
+            if (binding != null)
             {
                 Debug.Log(
-                    $"F{Time.frameCount} Run Hotkey \"{char.ToUpper(inputChar)}\": {item.Binding.Label}");
+                    $"F{Time.frameCount} Run Hotkey \"{char.ToUpper(inputChar)}\": {binding.Label}");
 
-                item.Binding.Execute(Keyboard.current.shiftKey.isPressed);
+                binding.Execute(Keyboard.current.shiftKey.isPressed);
 
-                if (_mode == Mode.Invisible && item.Binding is not CheatOpenPageBinding)
+                if (_mode == Mode.Invisible && binding is not CheatOpenPageBinding)
                 {
                     GoBackToFirstPage();
                 }
@@ -642,7 +720,14 @@ internal class Page
 {
     #region PROPERTIES
 
+    public Page(string title)
+    {
+        Title = title;
+    }
+
+    public string Title { get; set; }
     public List<CheatBinding> Bindings { get; } = new();
+    public List<CheatCategory> Categories { get; } = new();
 
     #endregion
 }

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace noio.CheatPanel
 {
-    internal class CheatSlider : CheatItem
+    internal class CheatSlider : CheatUIElementBase
     {
         #region SERIALIZED FIELDS
 

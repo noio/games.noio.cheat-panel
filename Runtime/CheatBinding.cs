@@ -1,4 +1,4 @@
-// (C)2024 @noio_games
+// (C)2025 @noio_games
 // Thomas van den Berg
 
 using System;
@@ -18,6 +18,12 @@ public abstract class CheatBinding
     public string Label { get; set; }
     public string PreferredHotkeys { get; set; } = "";
     public int HotkeyPriority { get; set; } = 0;
+
+    /// <summary>
+    /// This is the page the action is on
+    /// </summary>
+    public string Page { get; set; } = "";
+
     public string Category { get; set; } = "";
     public char Hotkey { get; private set; }
 
@@ -32,14 +38,23 @@ public abstract class CheatBinding
     ///     set are always sorted to a higher priority. Otherwise just returns the
     ///     manually set HotkeyPriority
     /// </summary>
-    public int HotkeyPrioritySortingKey =>
-        HotkeyPriority + (string.IsNullOrEmpty(PreferredHotkeys) ? 0 : 1000);
+    public (int, int, string, string) HotkeyPrioritySortingKey => (
+        string.IsNullOrEmpty(PreferredHotkeys) ? 0 : -1000,
+        -HotkeyPriority,
+        Category, Label);
+
+    public event Action NotifyLabelRefresh;
+
+    public void RefreshLabel()
+    {
+        NotifyLabelRefresh?.Invoke();
+    }
 
     #endregion
 
     public void SetHotkey(char c)
     {
-        Hotkey = c;
+        Hotkey = char.ToUpper(c);
     }
 
     public abstract void Execute(bool shift = false);
@@ -91,12 +106,16 @@ public class CheatFloatBinding : CheatBinding<float>
     {
     }
 
-    public float Increments { get; set; }= 0;
+    #region PROPERTIES
+
+    public float Increments { get; set; } = 0;
+
+    #endregion
 
     public override void Execute(bool shift)
     {
         var value = Value;
-        float incr = Increments == 0 ? (Max - Min) * .1f : Increments;
+        var incr = Increments == 0 ? (Max - Min) * .1f : Increments;
 
         if (shift)
         {
@@ -167,10 +186,17 @@ public class CheatActionBinding : CheatBinding
 public class CheatOpenPageBinding : CheatActionBinding
 {
     public CheatOpenPageBinding(
-        string label,
+        string pageTitle,
         Action action
-    ) : base(label, action)
+    ) : base(pageTitle, action)
     {
+        OpenPageWithTitle = pageTitle;
     }
+
+    #region PROPERTIES
+
+    public string OpenPageWithTitle { get; }
+
+    #endregion
 }
 }

@@ -31,6 +31,7 @@ public class CheatAttribute : Attribute
     public CheatAttribute(
         string preferredHotkeys = "",
         string label = "",
+        string page = "",
         string category = "",
         float min = 0,
         float max = 10,
@@ -39,6 +40,7 @@ public class CheatAttribute : Attribute
     {
         Label = label;
         PreferredHotkeys = preferredHotkeys;
+        Page = page;
         Category = category;
         Min = min;
         Max = max;
@@ -56,6 +58,16 @@ public class CheatAttribute : Attribute
     ///     Display title of the cheat on the panel. Will use member name if empty
     /// </summary>
     public string Label { get; }
+    
+    /// <summary>
+    /// Page to put the action on. Empty for default.
+    /// </summary>
+    public string Page { get; }
+
+    /// <summary>
+    ///     Under which category should the button display
+    /// </summary>
+    public string Category { get; }
 
     /// <summary>
     ///     Min value for float/int slider cheats
@@ -66,12 +78,6 @@ public class CheatAttribute : Attribute
     ///     Max value for float/int slider cheats
     /// </summary>
     public float Max { get; }
-
-    /// <summary>
-    ///     Under which category should the button display
-    /// </summary>
-    public string Category { get; }
-
 
     #endregion
 }

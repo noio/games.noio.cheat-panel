@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace noio.CheatPanel
 {
-    internal class CheatButton : CheatItem
+    internal class CheatButton : CheatUIElementBase
     {
         Button _button;
         Action _action;
