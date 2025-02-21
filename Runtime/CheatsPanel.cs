@@ -258,6 +258,7 @@ public class CheatsPanel : MonoBehaviour
 
                     _canvas.gameObject.SetActive(true);
                     gameObject.SetActive(true);
+                    UpdateCategoryGridHeights();
                     SelectFirstButton();
                     break;
 
@@ -347,6 +348,7 @@ public class CheatsPanel : MonoBehaviour
         }
 
         SetPageCategoriesActive(_currentPage, true);
+        UpdateCategoryGridHeights();
     }
 
     void SetPageCategoriesActive(Page page, bool value)
@@ -511,7 +513,6 @@ public class CheatsPanel : MonoBehaviour
 
         page.Categories.Sort((c1, c2) => string.Compare(c1.Title, c2.Title, StringComparison.Ordinal));
 
-        UpdateCategoryGridHeights();
     }
 
     T InstantiateUIElement<T>(T prefab, CheatBinding binding, Page page) where T : CheatUIElementBase
@@ -623,9 +624,12 @@ public class CheatsPanel : MonoBehaviour
 
     void UpdateCategoryGridHeights()
     {
-        foreach (var category in _currentPage.Categories)
+        if (_currentPage != null)
         {
-            category.UpdateGridHeight();
+            foreach (var category in _currentPage.Categories)
+            {
+                category.UpdateGridHeight();
+            }
         }
     }
 
