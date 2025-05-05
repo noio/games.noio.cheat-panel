@@ -383,7 +383,7 @@ public class CheatsPanel : MonoBehaviour
         var cheatBindingEnumerableType = typeof(IEnumerable<CheatBinding>);
 
         var type = component.GetType();
-        foreach (var member in type.GetMembers())
+        foreach (var member in type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
         {
             if (member.GetCustomAttribute(typeof(CheatAttribute), false) is
                 CheatAttribute cheatAttribute)
