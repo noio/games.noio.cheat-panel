@@ -30,9 +30,12 @@ public class CheatsPanel : MonoBehaviour
              "so that hotkeys still work.")]
     [SerializeField]
     InputActionReference _toggleAction;
-
+                                   
+    [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting.")]
     [SerializeField] Mode _initialModeInEditor = Mode.Invisible;
+    [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting.")]
     [SerializeField] Mode _initialModeInDevelopmentBuild = Mode.Disabled;
+    [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting.")]
     [SerializeField] Mode _initialModeInReleaseBuild = Mode.PermanentlyRemoved;
     [SerializeField] string _hotkeys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
     [SerializeField] string _excludedHotkeys = "WASD";
@@ -109,12 +112,14 @@ public class CheatsPanel : MonoBehaviour
         _originalCursorVisible = Cursor.visible;
         _originalCursorLockState = Cursor.lockState;
 
-#if UNITY_EDITOR
+#if CHEAT_PANEL_ENABLED
+        SetMode(Mode.Invisible);
+#elif UNITY_EDITOR
         SetMode(_initialModeInEditor);
 #elif DEVELOPMENT_BUILD
-            SetMode(_initialModeInDevelopmentBuild);
+        SetMode(_initialModeInDevelopmentBuild);
 #else
-            SetMode(_initialModeInReleaseBuild);
+        SetMode(_initialModeInReleaseBuild);
 #endif
     }
 
@@ -383,7 +388,8 @@ public class CheatsPanel : MonoBehaviour
         var cheatBindingEnumerableType = typeof(IEnumerable<CheatBinding>);
 
         var type = component.GetType();
-        foreach (var member in type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
+        foreach (var member in type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic |
+                                               BindingFlags.Instance | BindingFlags.Static))
         {
             if (member.GetCustomAttribute(typeof(CheatAttribute), false) is
                 CheatAttribute cheatAttribute)
@@ -512,7 +518,6 @@ public class CheatsPanel : MonoBehaviour
         }
 
         page.Categories.Sort((c1, c2) => string.Compare(c1.Title, c2.Title, StringComparison.Ordinal));
-
     }
 
     T InstantiateUIElement<T>(T prefab, CheatBinding binding, Page page) where T : CheatUIElementBase
