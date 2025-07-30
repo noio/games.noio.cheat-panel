@@ -30,13 +30,19 @@ public class CheatsPanel : MonoBehaviour
              "so that hotkeys still work.")]
     [SerializeField]
     InputActionReference _toggleAction;
-                                   
+
     [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting.")]
-    [SerializeField] Mode _initialModeInEditor = Mode.Invisible;
+    [SerializeField]
+    Mode _initialModeInEditor = Mode.Invisible;
+
     [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting.")]
-    [SerializeField] Mode _initialModeInDevelopmentBuild = Mode.Disabled;
+    [SerializeField]
+    Mode _initialModeInDevelopmentBuild = Mode.Disabled;
+
     [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting.")]
-    [SerializeField] Mode _initialModeInReleaseBuild = Mode.PermanentlyRemoved;
+    [SerializeField]
+    Mode _initialModeInReleaseBuild = Mode.PermanentlyRemoved;
+
     [SerializeField] string _hotkeys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
     [SerializeField] string _excludedHotkeys = "WASD";
     [SerializeField] GameObject[] _bindToObjects;
@@ -71,6 +77,7 @@ public class CheatsPanel : MonoBehaviour
     CursorLockMode _originalCursorLockState;
     float _updateTimer;
     Vector2 _canvasSize;
+    Page _homePage;
 
     #region PROPERTIES
 
@@ -138,8 +145,7 @@ public class CheatsPanel : MonoBehaviour
 
     void Start()
     {
-        var homePage = new Page(HomePageTitle);
-        _pages.Add(HomePageTitle, homePage);
+        _homePage = GetOrCreatePage(HomePageTitle);
 
         foreach (var go in _bindToObjects)
         {
@@ -147,7 +153,7 @@ public class CheatsPanel : MonoBehaviour
             {
                 foreach (var component in go.GetComponents<Component>())
                 {
-                    AddBindings(CreateBindingsForComponent(component));
+                    CreateBindingsForComponent(component);
                 }
             }
         }
@@ -157,8 +163,7 @@ public class CheatsPanel : MonoBehaviour
          */
         foreach (var page in _pages.Values)
         {
-            var pageTitle = page.Title;
-            CreateOpenPageBinding(pageTitle);
+            CreateOpenPageBinding(page);
         }
 
         foreach (var page in _pages.Values)
@@ -167,27 +172,6 @@ public class CheatsPanel : MonoBehaviour
         }
 
         OpenPage(_pages[HomePageTitle]);
-    }
-
-    void CreateOpenPageBinding(string pageTitle, string preferredHotkeys = null)
-    {
-        if (pageTitle == HomePageTitle)
-        {
-            return;
-        }
-
-        var homePage = _pages[HomePageTitle];
-        var openPageBinding = homePage.Bindings.FirstOrDefault(b =>
-            b is CheatOpenPageBinding openPageBinding && openPageBinding.OpenPageWithTitle == pageTitle);
-
-        if (openPageBinding == null)
-        {
-            homePage.Bindings.Add(new CheatOpenPageBinding(pageTitle, () => OpenPage(pageTitle))
-            {
-                Category = "_Pages",
-                PreferredHotkeys = preferredHotkeys
-            });
-        }
     }
 
     void OnEnable()
@@ -237,6 +221,26 @@ public class CheatsPanel : MonoBehaviour
     public void OnCancelAction()
     {
         ClosePageOrPanel();
+    }
+
+    void CreateOpenPageBinding(Page page, string preferredHotkeys = null)
+    {
+        if (page == _homePage)
+        {
+            return;
+        }
+
+        var openPageBinding = _homePage.Bindings.FirstOrDefault(b =>
+            b is CheatOpenPageBinding openPageBinding && openPageBinding.OpenPageWithTitle == page.Title);
+
+        if (openPageBinding == null)
+        {
+            _homePage.AddStaticBinding(new CheatOpenPageBinding(page.Title, () => OpenPage(page.Title))
+            {
+                Category = "_Pages",
+                PreferredHotkeys = preferredHotkeys
+            });
+        }
     }
 
     void SetMode(Mode newMode)
@@ -305,27 +309,19 @@ public class CheatsPanel : MonoBehaviour
         _isQuitting = true;
     }
 
-    /// <summary>
-    /// When calling this, the bindings must have pages and categories set.
-    /// </summary>
-    /// <param name="bindings"></param>
-    void AddBindings(IEnumerable<CheatBinding> bindings)
+    Page GetOrCreatePage(string pageTitle)
     {
-        foreach (var binding in bindings)
+        if (string.IsNullOrEmpty(pageTitle))
         {
-            var pageName = binding.Page;
-            if (string.IsNullOrEmpty(pageName))
-            {
-                pageName = HomePageTitle;
-            }
-
-            if (_pages.TryGetValue(pageName, out var page) == false)
-            {
-                page = _pages[pageName] = new Page(pageName);
-            }
-
-            page.Bindings.Add(binding);
+            pageTitle = HomePageTitle;
         }
+
+        if (_pages.TryGetValue(pageTitle, out var page) == false)
+        {
+            page = _pages[pageTitle] = new Page(pageTitle);
+        }
+
+        return page;
     }
 
     void OpenPage(string pageTitle, bool pushPreviousToStack = true)
@@ -338,7 +334,7 @@ public class CheatsPanel : MonoBehaviour
 
     void OpenPage(Page page, bool pushPreviousToStack = true)
     {
-        SetPageCategoriesActive(_currentPage, false);
+        SetPageVisible(_currentPage, false);
 
         if (_currentPage != null && pushPreviousToStack)
         {
@@ -347,16 +343,22 @@ public class CheatsPanel : MonoBehaviour
 
         _currentPage = page;
 
+        if (page.RefreshPageContentsOnOpen)
+        {
+            page.RefreshBindings();
+            SortAndAssignHotkeys(page);
+        }
+
         if (_currentPage.Bindings.Count > 0 && _currentPage.Categories.Count == 0)
         {
             BuildPageUI(_currentPage);
         }
 
-        SetPageCategoriesActive(_currentPage, true);
+        SetPageVisible(_currentPage, true);
         UpdateCategoryGridHeights();
     }
 
-    void SetPageCategoriesActive(Page page, bool value)
+    void SetPageVisible(Page page, bool value)
     {
         if (page == null)
         {
@@ -383,7 +385,7 @@ public class CheatsPanel : MonoBehaviour
         }
     }
 
-    IEnumerable<CheatBinding> CreateBindingsForComponent(Component component)
+    void CreateBindingsForComponent(Component component)
     {
         var cheatBindingEnumerableType = typeof(IEnumerable<CheatBinding>);
 
@@ -392,110 +394,138 @@ public class CheatsPanel : MonoBehaviour
                                                BindingFlags.Instance | BindingFlags.Static))
         {
             if (member.GetCustomAttribute(typeof(CheatAttribute), false) is
-                CheatAttribute cheatAttribute)
+                not CheatAttribute cheatAttribute)
             {
-                /*
-                 * Assign to home page by default, unless title is passed in CheatAttribute
-                 */
-                var page = string.IsNullOrEmpty(cheatAttribute.Page)
-                    ? HomePageTitle
-                    : cheatAttribute.Page;
+                continue;
+            }
 
-                /*
-                 * If no category is passed in CheatAttribute, assign page name,
-                 * except on home page: assign component name
-                 */
-                var category = string.IsNullOrEmpty(cheatAttribute.Category)
-                    ? page == HomePageTitle ? component.name : page
-                    : cheatAttribute.Category;
+            /*
+             * Assign to home page by default, unless title is passed in CheatAttribute
+             */
+            var page = GetOrCreatePage(cheatAttribute.Page);
 
-                var label = string.IsNullOrEmpty(cheatAttribute.Label)
-                    ? NicifyVariableName(member.Name)
-                    : cheatAttribute.Label;
+            /*
+             * If no category is passed in CheatAttribute, assign page name,
+             * except on home page: assign component name
+             */
+            var category = string.IsNullOrEmpty(cheatAttribute.Category)
+                ? page.Title == HomePageTitle ? component.name : page.Title
+                : cheatAttribute.Category;
 
-                switch (member)
+            var label = string.IsNullOrEmpty(cheatAttribute.Label)
+                ? NicifyVariableName(member.Name)
+                : cheatAttribute.Label;
+
+            switch (member)
+            {
+                case MethodInfo method:
                 {
-                    case MethodInfo method:
+                    /*
+                     * Either an action that we can call, or a method that returns a list
+                     * of cheatbindings, let's find out.
+                     */
+                    if (method.ReturnType == typeof(void))
+                    {
+                        var labelGetterMethodName = method.Name + "Label";
+                        var labelGetterMethod = type.GetMethods().FirstOrDefault(m =>
+                            m.Name == labelGetterMethodName && m.ReturnType == typeof(string));
+
+                        var binding = new CheatActionBinding(label, () => method.Invoke(component, null))
+                        {
+                            PreferredHotkeys = cheatAttribute.PreferredHotkeys,
+                            Category = category,
+                            LabelGetter = labelGetterMethod != null
+                                ? () => labelGetterMethod.Invoke(component, null) as string
+                                : null
+                        };
+                        page.AddStaticBinding(binding);
+                    }
+                    else if (cheatBindingEnumerableType.IsAssignableFrom(method.ReturnType))
                     {
                         /*
-                         * Either an action that we can call, or a method that returns a list
-                         * of cheatbindings, let's find out.
+                         * If this type of binding generates page,
+                         * and specifies a hotkey
+                         * we need to create an open page binding for them
                          */
-                        if (method.ReturnType == typeof(void))
+                        if (page != _homePage)
                         {
-                            var labelGetterMethodName = method.Name + "Label";
-                            var labelGetterMethod = type.GetMethods().FirstOrDefault(m =>
-                                m.Name == labelGetterMethodName && m.ReturnType == typeof(string));
-
-                            yield return new CheatActionBinding(label, () => method.Invoke(component, null))
-                            {
-                                PreferredHotkeys = cheatAttribute.PreferredHotkeys,
-                                Page = page,
-                                Category = category,
-                                LabelGetter = labelGetterMethod != null
-                                    ? () => labelGetterMethod.Invoke(component, null) as string
-                                    : null
-                            };
+                            CreateOpenPageBinding(page, cheatAttribute.PreferredHotkeys);
                         }
-                        else if (cheatBindingEnumerableType.IsAssignableFrom(method.ReturnType))
-                        {
-                            var bindings = (IEnumerable<CheatBinding>)method.Invoke(component, null);
-                            foreach (var binding in bindings)
-                            {
-                                /*
-                                 * Assign Page and Category from the Attribute
-                                 * (unless the returned binding overrides it)
-                                 */
-                                if (string.IsNullOrEmpty(binding.Page))
-                                {
-                                    binding.Page = page;
-                                }
 
+                        if (cheatAttribute.RefreshPageContentsOnOpen)
+                        {
+                            if (page.Bindings.Count > 0)
+                            {
+                                Debug.LogError(
+                                    $"[Cheat] Page {page.Title} is set to Refresh Contents on Open, " +
+                                    "but another [Cheat] attribute already added static contents. " +
+                                    $"Skipping {method.Name}");
+                                continue;
+                            }
+
+                            page.BindingsGetter = () =>
+                                (IEnumerable<CheatBinding>)method.Invoke(component, null);
+                        }
+                        else
+                        {
+                            if (page.BindingsGetter != null)
+                            {
+                                Debug.LogError(
+                                    "Adding static contents to a [Cheat] Page " +
+                                    "but that page was already set to to Refresh Contents on Open. " +
+                                    $"Skipping {method.Name}");
+                                continue;
+                            }
+
+                            var staticBindings =
+                                (IEnumerable<CheatBinding>)method.Invoke(component, null);
+                            foreach (var binding in staticBindings)
+                            {
                                 if (string.IsNullOrEmpty(binding.Category))
                                 {
                                     binding.Category = category;
                                 }
 
-                                yield return binding;
-                            }
-
-                            if (string.IsNullOrEmpty(cheatAttribute.PreferredHotkeys) == false)
-                            {
-                                CreateOpenPageBinding(page, cheatAttribute.PreferredHotkeys);
+                                page.AddStaticBinding(binding);
                             }
                         }
-
-                        break;
                     }
-                    case PropertyInfo property:
+
+                    break;
+                }
+                case PropertyInfo property:
+                {
+                    if (property.PropertyType == typeof(float))
                     {
-                        if (property.PropertyType == typeof(float))
+                        var binding = new CheatFloatBinding(label,
+                            () => (float)property.GetValue(component),
+                            value => property.SetValue(component, value))
                         {
-                            yield return new CheatFloatBinding(label,
-                                () => (float)property.GetValue(component),
-                                value => property.SetValue(component, value))
-                            {
-                                Min = cheatAttribute.Min,
-                                Max = cheatAttribute.Max,
-                                PreferredHotkeys = cheatAttribute.PreferredHotkeys,
-                                Category = category
-                            };
-                        }
-                        else if (property.PropertyType == typeof(bool))
-                        {
-                            yield return new CheatBoolBinding(label,
-                                () => (bool)property.GetValue(component),
-                                value => property.SetValue(component, value))
-                            {
-                                PreferredHotkeys = cheatAttribute.PreferredHotkeys,
-                                Category = category
-                            };
-                        }
-
-                        break;
+                            Min = cheatAttribute.Min,
+                            Max = cheatAttribute.Max,
+                            PreferredHotkeys = cheatAttribute.PreferredHotkeys,
+                            Category = category
+                        };
+                        page.AddStaticBinding(binding);
                     }
+                    else if (property.PropertyType == typeof(bool))
+                    {
+                        var binding = new CheatBoolBinding(label,
+                            () => (bool)property.GetValue(component),
+                            value => property.SetValue(component, value))
+                        {
+                            PreferredHotkeys = cheatAttribute.PreferredHotkeys,
+                            Category = category
+                        };
+                        page.AddStaticBinding(binding);
+                    }
+
+                    break;
                 }
             }
+            /*
+             * Assign to home page by default, unless title is passed in CheatAttribute
+             */
         }
     }
 
@@ -541,7 +571,7 @@ public class CheatsPanel : MonoBehaviour
         /*
          * Start with those items that have set a Preferred Hotkey.
          */
-        page.Bindings.Sort(((a, b) => a.HotkeyPrioritySortingKey.CompareTo(b.HotkeyPrioritySortingKey)));
+        page.SortBindings();
 
         // var orderedBindings = page.Bindings.OrderBy(item => item.HotkeyPrioritySortingKey);
         foreach (var binding in page.Bindings)
@@ -727,18 +757,44 @@ public class CheatsPanel : MonoBehaviour
 
 internal class Page
 {
-    #region PROPERTIES
+    readonly List<CheatBinding> _bindings = new();
 
     public Page(string title)
     {
         Title = title;
     }
 
+    #region PROPERTIES
+
     public string Title { get; set; }
-    public List<CheatBinding> Bindings { get; } = new();
+    public IReadOnlyList<CheatBinding> Bindings => _bindings;
     public List<CheatCategory> Categories { get; } = new();
+    public Func<IEnumerable<CheatBinding>> BindingsGetter { get; set; }
+    public bool RefreshPageContentsOnOpen => BindingsGetter != null;
 
     #endregion
+
+    public void AddStaticBinding(CheatBinding binding)
+    {
+        if (BindingsGetter != null)
+        {
+            Debug.LogError("Can't add Static Binding to a page that is set to Refresh Contents on Open");
+            return;
+        }
+
+        _bindings.Add(binding);
+    }
+
+    public void RefreshBindings()
+    {
+        _bindings.Clear();
+        _bindings.AddRange(BindingsGetter());
+    }
+
+    public void SortBindings()
+    {
+        _bindings.Sort((a, b) => a.HotkeyPrioritySortingKey.CompareTo(b.HotkeyPrioritySortingKey));
+    }
 }
 
 public enum Mode

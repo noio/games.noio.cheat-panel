@@ -22,7 +22,7 @@ public abstract class CheatBinding
     /// <summary>
     /// This is the page the action is on
     /// </summary>
-    public string Page { get; set; } = "";
+    public string PageTitle { get; set; } = "";
 
     public string Category { get; set; } = "";
     public char Hotkey { get; private set; }

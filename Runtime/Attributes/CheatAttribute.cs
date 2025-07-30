@@ -16,18 +16,6 @@ namespace noio.CheatPanel.Attributes
 [MeansImplicitUse]
 public class CheatAttribute : Attribute
 {
-    #region SERIALIZED FIELDS
-
-    /// <summary>
-    ///     If the member is an IEnumerable of CheatBinding, set this to true
-    ///     to add those cheats to a new page instead of on the current page.
-    ///     The Title/Category/Hotkeys will be used for the button that opens that page.
-    /// </summary>
-    /// <returns></returns>
-    public bool NewPage;
-
-    #endregion
-
     public CheatAttribute(
         string preferredHotkeys = "",
         string label = "",
@@ -35,7 +23,7 @@ public class CheatAttribute : Attribute
         string category = "",
         float min = 0,
         float max = 10,
-        bool newPage = false
+        bool refreshPageContentsOnOpen = false
     )
     {
         Label = label;
@@ -44,7 +32,8 @@ public class CheatAttribute : Attribute
         Category = category;
         Min = min;
         Max = max;
-        NewPage = newPage;
+        RefreshPageContentsOnOpen = refreshPageContentsOnOpen;
+        // NewPage = newPage;
     }
 
     #region PROPERTIES
@@ -78,6 +67,16 @@ public class CheatAttribute : Attribute
     ///     Max value for float/int slider cheats
     /// </summary>
     public float Max { get; }
+    
+    public bool RefreshPageContentsOnOpen { get; }
+    
+    /// <summary>
+    ///     If the member is an IEnumerable of CheatBinding, set this to true
+    ///     to add those cheats to a new page instead of on the current page.
+    ///     The Title/Category/Hotkeys will be used for the button that opens that page.
+    /// </summary>
+    /// <returns></returns>
+    // public bool NewPage;
 
     #endregion
 }

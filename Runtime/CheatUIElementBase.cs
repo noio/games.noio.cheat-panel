@@ -89,6 +89,10 @@ public abstract class CheatUIElementBase : MonoBehaviour,
         }
 
         string label = Binding.LabelGetter != null ? Binding.LabelGetter() : Binding.Label;
+        if (string.IsNullOrEmpty(label))
+        {
+            label = "UNKNOWN";
+        }
 
         var hotkey = Binding.Hotkey;
 
