@@ -11,6 +11,7 @@ internal class CheatCategory : MonoBehaviour
 {
     #region SERIALIZED FIELDS
 
+    [SerializeField] RectTransform _header;
     [SerializeField] RectTransform _contentParent;
     [SerializeField] TMP_Text _label;
 
@@ -31,11 +32,19 @@ internal class CheatCategory : MonoBehaviour
     public void UpdateGridHeight()
     {
         var availableHeight = ((RectTransform)transform.parent).rect.height;
-        availableHeight -= 20; // header;
-        var rows = Mathf.RoundToInt(availableHeight / 20);
         var gridLayout = _contentParent.GetComponent<GridLayoutGroup>();
+        availableHeight -= _header.rect.height + 2; // header;
+        var cellHeight = gridLayout.cellSize.y + gridLayout.spacing.y;
+        
+        var rows = Mathf.RoundToInt(availableHeight / cellHeight);
         gridLayout.constraint = GridLayoutGroup.Constraint.FixedRowCount;
         gridLayout.constraintCount = rows;
+    }
+
+    public void SetColumnWidth(float columnWidth)
+    {
+        var gridLayout = _contentParent.GetComponent<GridLayoutGroup>();
+        gridLayout.cellSize = new Vector2(columnWidth, gridLayout.cellSize.y);
     }
 }
 }

@@ -46,6 +46,7 @@ public class CheatsPanel : MonoBehaviour
     [SerializeField] string _hotkeys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
     [SerializeField] string _excludedHotkeys = "WASD";
     [SerializeField] GameObject[] _bindToObjects;
+    [SerializeField] float _columnWidth = 250;
 
     [Header("Internal")] //
     [SerializeField]
@@ -82,6 +83,7 @@ public class CheatsPanel : MonoBehaviour
     #region PROPERTIES
 
     public static bool IsOpen => _instance != null && _instance._mode == Mode.Open;
+    public float ColumnWidth => _columnWidth;
 
     #endregion
 
@@ -664,6 +666,7 @@ public class CheatsPanel : MonoBehaviour
             foreach (var category in _currentPage.Categories)
             {
                 category.UpdateGridHeight();
+                category.SetColumnWidth(_columnWidth);
             }
         }
     }
