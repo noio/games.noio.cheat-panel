@@ -358,6 +358,7 @@ public class CheatsPanel : MonoBehaviour
 
         SetPageVisible(_currentPage, true);
         UpdateCategoryGridHeights();
+        SelectFirstButton();
     }
 
     void SetPageVisible(Page page, bool value)
