@@ -22,7 +22,8 @@ public class CheatsPanel : MonoBehaviour
 
     #region SERIALIZED FIELDS
 
-    [Tooltip("The action that activates the debug panel for the first time.")]
+    [Tooltip("The action that activates the debug panel for the first time. Map this to something " +
+             "'secret', or hard to do accidentally, like a 7x multi tap of a key.")]
     [SerializeField]
     InputActionReference _activateAction;
 
@@ -31,15 +32,15 @@ public class CheatsPanel : MonoBehaviour
     [SerializeField]
     InputActionReference _toggleAction;
 
-    [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting.")]
+    [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting in a build.")]
     [SerializeField]
     Mode _initialModeInEditor = Mode.Invisible;
 
-    [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting.")]
+    [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting in a build.")]
     [SerializeField]
-    Mode _initialModeInDevelopmentBuild = Mode.Disabled;
+    Mode _initialModeInDevelopmentBuild = Mode.Inactive;
 
-    [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting.")]
+    [Tooltip("Defining symbol \'CHEAT_PANEL_ENABLED\' overrides this setting in a build.")]
     [SerializeField]
     Mode _initialModeInReleaseBuild = Mode.PermanentlyRemoved;
 
@@ -121,14 +122,16 @@ public class CheatsPanel : MonoBehaviour
         _originalCursorVisible = Cursor.visible;
         _originalCursorLockState = Cursor.lockState;
 
-#if CHEAT_PANEL_ENABLED
-        SetMode(Mode.Invisible);
-#elif UNITY_EDITOR
+#if UNITY_EDITOR
         SetMode(_initialModeInEditor);
-#elif DEVELOPMENT_BUILD
-        SetMode(_initialModeInDevelopmentBuild);
 #else
+    #if CHEAT_PANEL_ENABLED
+        SetMode(Mode.Inactive);
+    #elif DEVELOPMENT_BUILD
+        SetMode(_initialModeInDevelopmentBuild);
+    #else
         SetMode(_initialModeInReleaseBuild);
+    #endif
 #endif
     }
 
@@ -255,7 +258,7 @@ public class CheatsPanel : MonoBehaviour
                     Destroy(gameObject);
                     break;
 
-                case Mode.Disabled:
+                case Mode.Inactive:
                     Cursor.visible = _originalCursorVisible;
                     Cursor.lockState = _originalCursorLockState;
                     gameObject.SetActive(false);
@@ -270,7 +273,6 @@ public class CheatsPanel : MonoBehaviour
                     _canvas.gameObject.SetActive(true);
                     gameObject.SetActive(true);
                     UpdateCategoryGridHeights();
-                    SelectFirstButton();
                     break;
 
                 case Mode.Invisible:
@@ -692,7 +694,7 @@ public class CheatsPanel : MonoBehaviour
          */
         if (Application.isFocused &&
             _isQuitting == false &&
-            _mode != Mode.Disabled &&
+            _mode != Mode.Inactive &&
             Time.frameCount > 1)
         {
             /*
@@ -721,7 +723,7 @@ public class CheatsPanel : MonoBehaviour
 
     void HandleActivate(InputAction.CallbackContext ctx)
     {
-        if (_mode == Mode.Disabled)
+        if (_mode == Mode.Inactive)
         {
             OncePerFrame(() => { SetMode(Mode.Open); });
         }
@@ -805,7 +807,7 @@ public enum Mode
 {
     NotSet = 0,
     PermanentlyRemoved = 1,
-    Disabled = 2,
+    Inactive = 2,
     Invisible = 3,
     Open = 4
 }
