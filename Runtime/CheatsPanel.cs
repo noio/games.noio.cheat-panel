@@ -273,6 +273,7 @@ public class CheatsPanel : MonoBehaviour
                     _canvas.gameObject.SetActive(true);
                     gameObject.SetActive(true);
                     UpdateCategoryGridHeights();
+                    SelectFirstButton();
                     break;
 
                 case Mode.Invisible:
@@ -657,9 +658,20 @@ public class CheatsPanel : MonoBehaviour
 
     void SelectFirstButton()
     {
-        EventSystem.current.SetSelectedGameObject(_currentPage.Categories[0]
-                                                              .GetComponentInChildren<Selectable>()
-                                                              .gameObject);
+        /*
+         * Will select the first button if a page is loaded.
+         * This could be called from SetMode(Open) before this object has had
+         * Start() called in which case NO PAGE is open, so we need
+         * the null checks here.
+         */
+        if (_currentPage != null && _currentPage.Categories.Count > 0)
+        {
+            var selectable = _currentPage.Categories[0].GetComponentInChildren<Selectable>();
+            if (selectable != null)
+            {
+                EventSystem.current.SetSelectedGameObject(selectable.gameObject);
+            }
+        }
     }
 
     void UpdateCategoryGridHeights()
