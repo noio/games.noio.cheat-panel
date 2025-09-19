@@ -17,7 +17,7 @@ A Unity plugin to allow quickly adding 'cheats' or 'debug commands' to a game.
 
 Add **[Cheat]** to a bool property to create a toggle:
 
-```
+```csharp
 [Cheat("P", category: "Gameplay")]
 public bool PauseSpawning
 {
@@ -31,7 +31,7 @@ public bool PauseSpawning
 Add **[Cheat]** to a method and a button will be created to call that method. If you add a method _with the same name + 'Label'_, that will be used
 as a label for the button:
 
-```
+```csharp
 [Cheat(category: "Gameplay")]
 public void ChangeGameSpeed()
 {
