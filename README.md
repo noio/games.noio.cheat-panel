@@ -6,10 +6,10 @@ A Unity plugin to allow quickly adding 'cheats' or 'debug commands' to a game.
 
 1. Install (use Package Manager "**Install package from git URL...**")
 2. Add the **Cheat Panel** prefab to your scene.
-3. Create a new GameObject with a new component that will hold your debug actions.
-4. On the Panel, configure Input actions to open the panel. (**Activate Action** and **Toggle Action**)
-5. Add your newly created object into the Panel's **Bind To Objects** list.
-6. On the new component, mark properties and methods with **[Cheat]** and they will automatically be added to the panel.
+3. Create a **new GameObject with a new Component** that will hold your debug actions.
+4. Add your newly created object into the Panel's **Bind To Objects** list.
+5. On the Panel, configure **Input Actions** to open the panel. (**Activate Action** and **Toggle Action**)
+6. On your **new Component**, mark properties and methods with **[Cheat]** and they will automatically be added to the panel.
 
 ## Functionality
 
