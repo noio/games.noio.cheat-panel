@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace noio.CheatPanel
 {
-internal class CheatCategory : MonoBehaviour
+public class CheatCategory : MonoBehaviour
 {
     #region SERIALIZED FIELDS
 

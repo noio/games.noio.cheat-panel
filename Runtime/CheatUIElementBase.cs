@@ -96,16 +96,21 @@ public abstract class CheatUIElementBase : MonoBehaviour,
 
         var hotkey = Binding.Hotkey;
 
-        if (hotkey != default)
+        if (hotkey != 0)
         {
+            var hotkeyColor = new Color(0.94f, 0.6f, 1f); 
+            string colorHex = ColorUtility.ToHtmlStringRGB(hotkeyColor);
+            var startTag = $"<color=#{colorHex}><b>";
+            var endTag = "</b></color>";
+
             var firstChar = char.ToUpper(label[0]);
             if (firstChar == hotkey)
             {
-                label = $"[<u>{hotkey}</u>]{label[1..]}";
+                label = $"{startTag}{hotkey}{endTag}{label[1..]}";
             }
             else
             {
-                label = $"[<u>{hotkey}</u>] {label}";
+                label = $"{label} [ {startTag}{hotkey}{endTag} ]";
             }
 
             /*

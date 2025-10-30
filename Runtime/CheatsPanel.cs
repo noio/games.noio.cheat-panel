@@ -47,7 +47,8 @@ public class CheatsPanel : MonoBehaviour
     [SerializeField] string _hotkeys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
     [SerializeField] string _excludedHotkeys = "WASD";
     [SerializeField] GameObject[] _bindToObjects;
-    [SerializeField] float _columnWidth = 250;
+    [SerializeField] float _maxColumnWidth = 250;
+    [SerializeField] [Range(4, 8)] int _columns = 6;
 
     [Header("Internal")] //
     [SerializeField]
@@ -64,9 +65,9 @@ public class CheatsPanel : MonoBehaviour
      * Build Fields:
      */
     // readonly List<CheatUIElementBase> _currentItems = new();
-    readonly Dictionary<string, Page> _pages = new();
-    readonly Stack<Page> _pageStack = new();
-    Page _currentPage;
+    readonly Dictionary<string, CheatPage> _pages = new();
+    readonly Stack<CheatPage> _pageStack = new();
+    CheatPage _currentPage;
     Canvas _canvas;
 
     /*
@@ -79,12 +80,11 @@ public class CheatsPanel : MonoBehaviour
     CursorLockMode _originalCursorLockState;
     float _updateTimer;
     Vector2 _canvasSize;
-    Page _homePage;
+    CheatPage _homePage;
 
     #region PROPERTIES
 
     public static bool IsOpen => _instance != null && _instance._mode == Mode.Open;
-    public float ColumnWidth => _columnWidth;
 
     #endregion
 
@@ -228,7 +228,7 @@ public class CheatsPanel : MonoBehaviour
         ClosePageOrPanel();
     }
 
-    void CreateOpenPageBinding(Page page, string preferredHotkeys = null)
+    void CreateOpenPageBinding(CheatPage page, string preferredHotkeys = null)
     {
         if (page == _homePage)
         {
@@ -314,7 +314,7 @@ public class CheatsPanel : MonoBehaviour
         _isQuitting = true;
     }
 
-    Page GetOrCreatePage(string pageTitle)
+    CheatPage GetOrCreatePage(string pageTitle)
     {
         if (string.IsNullOrEmpty(pageTitle))
         {
@@ -323,7 +323,7 @@ public class CheatsPanel : MonoBehaviour
 
         if (_pages.TryGetValue(pageTitle, out var page) == false)
         {
-            page = _pages[pageTitle] = new Page(pageTitle);
+            page = _pages[pageTitle] = new CheatPage(pageTitle);
         }
 
         return page;
@@ -337,7 +337,7 @@ public class CheatsPanel : MonoBehaviour
         }
     }
 
-    void OpenPage(Page page, bool pushPreviousToStack = true)
+    void OpenPage(CheatPage page, bool pushPreviousToStack = true)
     {
         SetPageVisible(_currentPage, false);
 
@@ -364,7 +364,7 @@ public class CheatsPanel : MonoBehaviour
         SelectFirstButton();
     }
 
-    void SetPageVisible(Page page, bool value)
+    void SetPageVisible(CheatPage page, bool value)
     {
         if (page == null)
         {
@@ -535,7 +535,7 @@ public class CheatsPanel : MonoBehaviour
         }
     }
 
-    void BuildPageUI(Page page)
+    void BuildPageUI(CheatPage page)
     {
         foreach (var binding in page.Bindings.OrderBy(b => (b.Category, b.Label)))
         {
@@ -556,7 +556,7 @@ public class CheatsPanel : MonoBehaviour
         page.Categories.Sort((c1, c2) => string.Compare(c1.Title, c2.Title, StringComparison.Ordinal));
     }
 
-    T InstantiateUIElement<T>(T prefab, CheatBinding binding, Page page) where T : CheatUIElementBase
+    T InstantiateUIElement<T>(T prefab, CheatBinding binding, CheatPage page) where T : CheatUIElementBase
     {
         var category = page.Categories.FirstOrDefault(c => c.Title == binding.Category);
         if (category == null)
@@ -571,7 +571,7 @@ public class CheatsPanel : MonoBehaviour
         return uiElement;
     }
 
-    void SortAndAssignHotkeys(Page page)
+    void SortAndAssignHotkeys(CheatPage page)
     {
         var occupiedHotkeys = "";
         /*
@@ -586,10 +586,9 @@ public class CheatsPanel : MonoBehaviour
 
             var possibleBindings = (binding.PreferredHotkeys + title + _hotkeys).ToUpper();
 
-            var foundBinding = possibleBindings.FirstOrDefault(
-                c => _hotkeys.Contains(c) &&
-                     _excludedHotkeys.Contains(c) == false &&
-                     occupiedHotkeys.Contains(c) == false);
+            var foundBinding = possibleBindings.FirstOrDefault(c => _hotkeys.Contains(c) &&
+                                                                    _excludedHotkeys.Contains(c) == false &&
+                                                                    occupiedHotkeys.Contains(c) == false);
 
             if (foundBinding != default)
             {
@@ -678,10 +677,13 @@ public class CheatsPanel : MonoBehaviour
     {
         if (_currentPage != null)
         {
+            var width = _contentParent.rect.width;
+            var columnWidth = Mathf.Min(_maxColumnWidth, width / _columns - 4);
+
             foreach (var category in _currentPage.Categories)
             {
                 category.UpdateGridHeight();
-                category.SetColumnWidth(_columnWidth);
+                category.SetColumnWidth(columnWidth);
             }
         }
     }
@@ -771,48 +773,6 @@ public class CheatsPanel : MonoBehaviour
     }
 
     #endregion
-}
-
-internal class Page
-{
-    readonly List<CheatBinding> _bindings = new();
-
-    public Page(string title)
-    {
-        Title = title;
-    }
-
-    #region PROPERTIES
-
-    public string Title { get; set; }
-    public IReadOnlyList<CheatBinding> Bindings => _bindings;
-    public List<CheatCategory> Categories { get; } = new();
-    public Func<IEnumerable<CheatBinding>> BindingsGetter { get; set; }
-    public bool RefreshPageContentsOnOpen => BindingsGetter != null;
-
-    #endregion
-
-    public void AddStaticBinding(CheatBinding binding)
-    {
-        if (BindingsGetter != null)
-        {
-            Debug.LogError("Can't add Static Binding to a page that is set to Refresh Contents on Open");
-            return;
-        }
-
-        _bindings.Add(binding);
-    }
-
-    public void RefreshBindings()
-    {
-        _bindings.Clear();
-        _bindings.AddRange(BindingsGetter());
-    }
-
-    public void SortBindings()
-    {
-        _bindings.Sort((a, b) => a.HotkeyPrioritySortingKey.CompareTo(b.HotkeyPrioritySortingKey));
-    }
 }
 
 public enum Mode
