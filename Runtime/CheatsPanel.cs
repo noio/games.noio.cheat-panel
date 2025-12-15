@@ -418,6 +418,8 @@ public class CheatsPanel : MonoBehaviour
                 ? page.Title == HomePageTitle ? component.name : page.Title
                 : cheatAttribute.Category;
 
+            var subcategory = cheatAttribute.Subcategory;
+
             var label = string.IsNullOrEmpty(cheatAttribute.Label)
                 ? NicifyVariableName(member.Name)
                 : cheatAttribute.Label;
@@ -440,6 +442,7 @@ public class CheatsPanel : MonoBehaviour
                         {
                             PreferredHotkeys = cheatAttribute.PreferredHotkeys,
                             Category = category,
+                            Subcategory = subcategory,
                             LabelGetter = labelGetterMethod != null
                                 ? () => labelGetterMethod.Invoke(component, null) as string
                                 : null
@@ -492,6 +495,11 @@ public class CheatsPanel : MonoBehaviour
                                     binding.Category = category;
                                 }
 
+                                if (string.IsNullOrEmpty(binding.Subcategory))
+                                {
+                                    binding.Subcategory = subcategory;
+                                }
+
                                 page.AddStaticBinding(binding);
                             }
                         }
@@ -510,7 +518,8 @@ public class CheatsPanel : MonoBehaviour
                             Min = cheatAttribute.Min,
                             Max = cheatAttribute.Max,
                             PreferredHotkeys = cheatAttribute.PreferredHotkeys,
-                            Category = category
+                            Category = category,
+                            Subcategory = subcategory
                         };
                         page.AddStaticBinding(binding);
                     }
@@ -521,7 +530,8 @@ public class CheatsPanel : MonoBehaviour
                             value => property.SetValue(component, value))
                         {
                             PreferredHotkeys = cheatAttribute.PreferredHotkeys,
-                            Category = category
+                            Category = category,
+                            Subcategory = subcategory
                         };
                         page.AddStaticBinding(binding);
                     }
@@ -537,7 +547,7 @@ public class CheatsPanel : MonoBehaviour
 
     void BuildPageUI(CheatPage page)
     {
-        foreach (var binding in page.Bindings.OrderBy(b => (b.Category, b.Label)))
+        foreach (var binding in page.Bindings.OrderBy(b => (b.Category, b.Subcategory ?? "", b.Label)))
         {
             switch (binding)
             {
@@ -574,26 +584,71 @@ public class CheatsPanel : MonoBehaviour
     void SortAndAssignHotkeys(CheatPage page)
     {
         var occupiedHotkeys = "";
-        /*
-         * Start with those items that have set a Preferred Hotkey.
-         */
         page.SortBindings();
 
-        // var orderedBindings = page.Bindings.OrderBy(item => item.HotkeyPrioritySortingKey);
+        /*
+         * First pass: assign preferred hotkeys only
+         */
         foreach (var binding in page.Bindings)
         {
-            var title = binding.Label.ToUpper();
-
-            var possibleBindings = (binding.PreferredHotkeys + title + _hotkeys).ToUpper();
-
-            var foundBinding = possibleBindings.FirstOrDefault(c => _hotkeys.Contains(c) &&
-                                                                    _excludedHotkeys.Contains(c) == false &&
-                                                                    occupiedHotkeys.Contains(c) == false);
-
-            if (foundBinding != default)
+            if (string.IsNullOrEmpty(binding.PreferredHotkeys) == false)
             {
-                occupiedHotkeys += foundBinding;
-                binding.SetHotkey(foundBinding.ToString()[0]);
+                var foundBinding = binding.PreferredHotkeys.ToUpper().FirstOrDefault(c =>
+                    _hotkeys.Contains(c) &&
+                    _excludedHotkeys.Contains(c) == false &&
+                    occupiedHotkeys.Contains(c) == false);
+
+                if (foundBinding != 0)
+                {
+                    occupiedHotkeys += foundBinding;
+                    binding.SetHotkey(foundBinding);
+                }
+            }
+        }
+
+        /*
+         * Second pass: auto-assign to bindings that HAD preferred hotkeys but didn't get one
+         */
+        foreach (var binding in page.Bindings)
+        {
+            if (binding.Hotkey == 0 && string.IsNullOrEmpty(binding.PreferredHotkeys) == false)
+            {
+                var title = binding.Label.ToUpper();
+                var possibleBindings = (title + _hotkeys).ToUpper();
+
+                var foundBinding = possibleBindings.FirstOrDefault(c =>
+                    _hotkeys.Contains(c) &&
+                    _excludedHotkeys.Contains(c) == false &&
+                    occupiedHotkeys.Contains(c) == false);
+
+                if (foundBinding != 0)
+                {
+                    occupiedHotkeys += foundBinding;
+                    binding.SetHotkey(foundBinding);
+                }
+            }
+        }
+
+        /*
+         * Third pass: auto-assign to remaining bindings with no preferred hotkeys
+         */
+        foreach (var binding in page.Bindings)
+        {
+            if (binding.Hotkey == 0)
+            {
+                var title = binding.Label.ToUpper();
+                var possibleBindings = (title + _hotkeys).ToUpper();
+
+                var foundBinding = possibleBindings.FirstOrDefault(c =>
+                    _hotkeys.Contains(c) &&
+                    _excludedHotkeys.Contains(c) == false &&
+                    occupiedHotkeys.Contains(c) == false);
+
+                if (foundBinding != 0)
+                {
+                    occupiedHotkeys += foundBinding;
+                    binding.SetHotkey(foundBinding);
+                }
             }
         }
     }

@@ -25,6 +25,7 @@ public abstract class CheatBinding
     public string PageTitle { get; set; } = "";
 
     public string Category { get; set; } = "";
+    public string Subcategory { get; set; } = "";
     public char Hotkey { get; private set; }
 
     /// <summary>
@@ -38,10 +39,10 @@ public abstract class CheatBinding
     ///     set are always sorted to a higher priority. Otherwise just returns the
     ///     manually set HotkeyPriority
     /// </summary>
-    public (int, int, string, string) HotkeyPrioritySortingKey => (
+    public (int, int, string, string, string) HotkeyPrioritySortingKey => (
         string.IsNullOrEmpty(PreferredHotkeys) ? 0 : -1000,
         -HotkeyPriority,
-        Category, Label);
+        Category, Subcategory ?? "", Label);
 
     public event Action NotifyLabelRefresh;
 

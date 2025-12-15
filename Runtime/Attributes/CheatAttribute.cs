@@ -21,6 +21,7 @@ public class CheatAttribute : Attribute
         string label = "",
         string page = "",
         string category = "",
+        string subcategory = "",
         float min = 0,
         float max = 10,
         bool refreshPageContentsOnOpen = false
@@ -30,6 +31,7 @@ public class CheatAttribute : Attribute
         PreferredHotkeys = preferredHotkeys;
         Page = page;
         Category = category;
+        Subcategory = subcategory;
         Min = min;
         Max = max;
         RefreshPageContentsOnOpen = refreshPageContentsOnOpen;
@@ -57,6 +59,11 @@ public class CheatAttribute : Attribute
     ///     Under which category should the button display
     /// </summary>
     public string Category { get; }
+
+    /// <summary>
+    ///     Subcategory within the category to group buttons together
+    /// </summary>
+    public string Subcategory { get; }
 
     /// <summary>
     ///     Min value for float/int slider cheats

@@ -10,7 +10,6 @@ namespace noio.CheatPanel
     internal class CheatButton : CheatUIElementBase
     {
         Button _button;
-        Action _action;
         CheatActionBinding _binding;
 
         #region MONOBEHAVIOUR METHODS
@@ -23,13 +22,13 @@ namespace noio.CheatPanel
                 Binding.Execute(Keyboard.current.shiftKey.isPressed);
                 RefreshLabel();
             });
+            
         }
 
         #endregion
 
         public void Init(Action action)
         {
-            _action = action;
         }
         
     }

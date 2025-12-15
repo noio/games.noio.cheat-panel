@@ -11,11 +11,12 @@ using UnityEngine.UI;
 namespace noio.CheatPanel
 {
 public abstract class CheatUIElementBase : MonoBehaviour,
-    IPointerClickHandler, ISubmitHandler, ISelectHandler, ICancelHandler
+    IPointerClickHandler, ISubmitHandler, ISelectHandler, IDeselectHandler, ICancelHandler
 {
     #region SERIALIZED FIELDS
 
     [SerializeField] TMP_Text _label;
+    [SerializeField] Image _outline;
 
     #endregion
 
@@ -34,11 +35,10 @@ public abstract class CheatUIElementBase : MonoBehaviour,
         {
             var selectable = GetComponent<Selectable>();
             var colorBlock = selectable.colors;
-            var color = Color.HSVToRGB(value, .3f, 1);
-            colorBlock.normalColor *= color;
-            colorBlock.highlightedColor *= color;
-            colorBlock.selectedColor *= color;
-            colorBlock.disabledColor *= color;
+            colorBlock.normalColor = Color.HSVToRGB(value, .4f, 1);
+            colorBlock.highlightedColor = Color.HSVToRGB(value, .3f, 1);
+            colorBlock.selectedColor = Color.HSVToRGB(value, .2f, 1);
+            colorBlock.disabledColor = Color.HSVToRGB(value, .2f,.8f);
             selectable.colors = colorBlock;
         }
     }
@@ -59,6 +59,18 @@ public abstract class CheatUIElementBase : MonoBehaviour,
 
     public void OnSelect(BaseEventData eventData)
     {
+        if (_outline != null)
+        {
+            _outline.enabled = true;
+        }
+    }
+
+    public void OnDeselect(BaseEventData eventData)
+    {
+        if (_outline != null)
+        {
+            _outline.enabled = false;
+        }
     }
 
     public void OnCancel(BaseEventData eventData)
@@ -75,6 +87,17 @@ public abstract class CheatUIElementBase : MonoBehaviour,
         Binding.NotifyLabelRefresh += RefreshLabel;
         InitializeInternal();
         _panel = panel;
+
+        if (!string.IsNullOrEmpty(binding.Subcategory))
+        {
+            HueTint = GetHueFromString(binding.Subcategory);
+        }
+
+        if (_outline != null)
+        {
+            _outline.enabled = false;
+        }
+
         RefreshLabel();
     }
 
@@ -98,7 +121,7 @@ public abstract class CheatUIElementBase : MonoBehaviour,
 
         if (hotkey != 0)
         {
-            var hotkeyColor = new Color(0.94f, 0.6f, 1f); 
+            var hotkeyColor = new Color(0f, 0f, 1f); 
             string colorHex = ColorUtility.ToHtmlStringRGB(hotkeyColor);
             var startTag = $"<color=#{colorHex}><b>";
             var endTag = "</b></color>";
@@ -138,6 +161,16 @@ public abstract class CheatUIElementBase : MonoBehaviour,
 
     protected virtual void InitializeInternal()
     {
+    }
+
+    static float GetHueFromString(string str)
+    {
+        var hash = 0;
+        foreach (var c in str)
+        {
+            hash = ((hash << 5) - hash) + c;
+        }
+        return Mathf.Abs(hash % 360) / 360f;
     }
 }
 }
