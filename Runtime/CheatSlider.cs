@@ -5,7 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace noio.CheatPanel
+namespace noio.Cheats
 {
     internal class CheatSlider : CheatUIElementBase
     {

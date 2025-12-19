@@ -6,19 +6,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using noio.CheatPanel.Attributes;
+using noio.Cheats.Attributes;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-namespace noio.CheatPanel
+namespace noio.Cheats
 {
-public class CheatsPanel : MonoBehaviour
+public class CheatPanel : MonoBehaviour
 {
     const string HomePageTitle = "Home";
-    static CheatsPanel _instance;
+    static CheatPanel _instance;
 
     #region SERIALIZED FIELDS
 
@@ -44,6 +44,7 @@ public class CheatsPanel : MonoBehaviour
     [SerializeField]
     Mode _initialModeInReleaseBuild = Mode.PermanentlyRemoved;
 
+    [SerializeField] bool _listenToTextInput = true;
     [SerializeField] string _hotkeys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
     [SerializeField] string _excludedHotkeys = "WASD";
     [SerializeField] GameObject[] _bindToObjects;
@@ -85,6 +86,31 @@ public class CheatsPanel : MonoBehaviour
     #region PROPERTIES
 
     public static bool IsOpen => _instance != null && _instance._mode == Mode.Open;
+
+    public static bool ListenToTextInput
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                return _instance._listenToTextInput;
+            }
+
+            Debug.LogWarning("CheatPanel instance not found.");
+            return false;
+        }
+        set
+        {
+            if (_instance != null)
+            {
+                _instance._listenToTextInput = value;
+            }
+            else
+            {
+                Debug.LogWarning("CheatPanel instance not found.");
+            }
+        }
+    }
 
     #endregion
 
@@ -761,7 +787,8 @@ public class CheatsPanel : MonoBehaviour
         /*
          * Don't do debug actions in frame one because that could be from CMD+P (play)
          */
-        if (Application.isFocused &&
+        if (ListenToTextInput &&
+            Application.isFocused &&
             _isQuitting == false &&
             _mode != Mode.Inactive &&
             Time.frameCount > 1)

@@ -4,7 +4,7 @@
 using System;
 using JetBrains.Annotations;
 
-namespace noio.CheatPanel.Attributes
+namespace noio.Cheats.Attributes
 {
 /// <summary>
 ///     Create a cheat binding for this Method, Property, or if this is a Method of type

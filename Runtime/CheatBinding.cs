@@ -4,7 +4,7 @@
 using System;
 using UnityEngine;
 
-namespace noio.CheatPanel
+namespace noio.Cheats
 {
 public abstract class CheatBinding
 {

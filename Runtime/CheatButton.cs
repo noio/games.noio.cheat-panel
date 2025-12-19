@@ -5,7 +5,7 @@ using System;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-namespace noio.CheatPanel
+namespace noio.Cheats
 {
     internal class CheatButton : CheatUIElementBase
     {

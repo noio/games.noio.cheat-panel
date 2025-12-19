@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace noio.CheatPanel
+namespace noio.Cheats
 {
 public class CheatPage
 {

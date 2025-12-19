@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace noio.CheatPanel
+namespace noio.Cheats
 {
 public abstract class CheatUIElementBase : MonoBehaviour,
     IPointerClickHandler, ISubmitHandler, ISelectHandler, IDeselectHandler, ICancelHandler
@@ -22,7 +22,7 @@ public abstract class CheatUIElementBase : MonoBehaviour,
 
     string _title;
     char _hotkey;
-    CheatsPanel _panel;
+    CheatPanel _panel;
     bool _didSetLabelOnce;
 
     #region PROPERTIES
@@ -80,7 +80,7 @@ public abstract class CheatUIElementBase : MonoBehaviour,
 
     #endregion
 
-    public void Initialize(CheatBinding binding, CheatsPanel panel)
+    public void Initialize(CheatBinding binding, CheatPanel panel)
     {
         name = binding.Label;
         Binding = binding;

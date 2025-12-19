@@ -1,7 +1,7 @@
 // (C)2023 @noio_games
 // Thomas van den Berg
 
-namespace noio.CheatPanel
+namespace noio.Cheats
 {
     public class CheatItemData
     {
