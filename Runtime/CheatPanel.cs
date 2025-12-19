@@ -91,7 +91,7 @@ public class CheatPanel : MonoBehaviour
     {
         get
         {
-            if (_instance == null)
+            if (_instance != null)
             {
                 return _instance._listenToTextInput;
             }
