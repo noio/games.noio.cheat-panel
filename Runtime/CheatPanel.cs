@@ -17,8 +17,12 @@ namespace noio.Cheats
 {
 public class CheatPanel : MonoBehaviour
 {
+    public static event Action Opened;
+    public static event Action Closed;
+    
     const string HomePageTitle = "Home";
     static CheatPanel _instance;
+        
 
     #region SERIALIZED FIELDS
 
@@ -278,6 +282,7 @@ public class CheatPanel : MonoBehaviour
     {
         if (_mode != newMode)
         {
+            var wasOpen = _mode == Mode.Open;
             switch (newMode)
             {
                 case Mode.PermanentlyRemoved:
@@ -314,6 +319,15 @@ public class CheatPanel : MonoBehaviour
             }
 
             _mode = newMode;
+
+            if (wasOpen && !IsOpen)
+            {
+                Closed?.Invoke();
+            }
+            else if (!wasOpen && IsOpen)
+            {
+                Opened?.Invoke();
+            }
         }
     }
 
