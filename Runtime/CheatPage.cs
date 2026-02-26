@@ -21,8 +21,9 @@ public class CheatPage
     public string Title { get; set; }
     public IReadOnlyList<CheatBinding> Bindings => _bindings;
     public List<CheatCategory> Categories { get; } = new();
+    public List<CheatUIElementBase> Elements { get; } = new();
     public Func<IEnumerable<CheatBinding>> BindingsGetter { get; set; }
-    public bool RefreshPageContentsOnOpen => BindingsGetter != null;
+    public bool RecreatePageContentsOnOpen => BindingsGetter != null;
 
     #endregion
 

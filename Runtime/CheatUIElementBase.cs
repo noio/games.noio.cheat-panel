@@ -82,9 +82,8 @@ public abstract class CheatUIElementBase : MonoBehaviour,
 
     public void Initialize(CheatBinding binding, CheatPanel panel)
     {
-        name = binding.Label;
+        name = binding.GetLabel();
         Binding = binding;
-        Binding.NotifyLabelRefresh += RefreshLabel;
         InitializeInternal();
         _panel = panel;
 
@@ -101,17 +100,19 @@ public abstract class CheatUIElementBase : MonoBehaviour,
         RefreshLabel();
     }
 
+    public abstract void RefreshValue();
+
     public void RefreshLabel()
     {
         /*
          * If this binding doesn't have a dynamic label, we only need to set once:
          */
-        if (_didSetLabelOnce && Binding.LabelGetter == null)
+        if (_didSetLabelOnce && Binding.HasDynamicLabel == false)
         {
             return;
         }
 
-        string label = Binding.LabelGetter != null ? Binding.LabelGetter() : Binding.Label;
+        string label = Binding.GetDynamicLabel != null ? Binding.GetDynamicLabel() : Binding.Label;
         if (string.IsNullOrEmpty(label))
         {
             label = "UNKNOWN";

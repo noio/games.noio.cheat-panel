@@ -30,6 +30,10 @@ namespace noio.Cheats
         public void Init(Action action)
         {
         }
-        
+
+        public override void RefreshValue()
+        {
+            
+        }
     }
 }

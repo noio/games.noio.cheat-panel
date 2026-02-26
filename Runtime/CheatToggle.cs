@@ -33,18 +33,23 @@ namespace noio.Cheats
 
         #endregion
 
+        public override void RefreshValue()
+        {
+            RefreshValueLabel();
+        }
+
         protected override void InitializeInternal()
         {
             (Binding as CheatBoolBinding).ValueChanged += HandleBindingValueChanged;
-            SetValueLabel();
+            RefreshValueLabel();
         }
 
         void HandleBindingValueChanged()
         {
-            SetValueLabel();
+            RefreshValueLabel();
         }
 
-        void SetValueLabel()
+        void RefreshValueLabel()
         {
             _valueLabel.text = Value ? "YES" : "no";
         }

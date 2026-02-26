@@ -1,4 +1,4 @@
-// (C)2025 @noio_games
+// (C)2026 @noio_games
 // Thomas van den Berg
 
 using System;
@@ -8,6 +8,7 @@ namespace noio.Cheats
 {
 public abstract class CheatBinding
 {
+
     public CheatBinding(string label)
     {
         Label = label;
@@ -20,7 +21,7 @@ public abstract class CheatBinding
     public int HotkeyPriority { get; set; } = 0;
 
     /// <summary>
-    /// This is the page the action is on
+    ///     This is the page the action is on
     /// </summary>
     public string PageTitle { get; set; } = "";
 
@@ -32,7 +33,7 @@ public abstract class CheatBinding
     ///     Method that will be called after every interaction with the button to
     ///     update the label
     /// </summary>
-    public Func<string> LabelGetter { get; set; }
+    public Func<string> GetDynamicLabel { get; set; }
 
     /// <summary>
     ///     Returns a priority sorting key for this binding. Bindings with preferred hotkeys
@@ -44,14 +45,14 @@ public abstract class CheatBinding
         -HotkeyPriority,
         Category, Subcategory ?? "", Label);
 
-    public event Action NotifyLabelRefresh;
-
-    public void RefreshLabel()
-    {
-        NotifyLabelRefresh?.Invoke();
-    }
+    public bool HasDynamicLabel => GetDynamicLabel != null;
 
     #endregion
+
+    public string GetLabel()
+    {
+        return GetDynamicLabel?.Invoke() ?? Label;
+    }
 
     public void SetHotkey(char c)
     {

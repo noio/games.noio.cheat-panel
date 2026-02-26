@@ -26,6 +26,11 @@ namespace noio.Cheats
 
         #endregion
 
+        public override void RefreshValue()
+        {
+            RefreshValueLabel();
+        }
+
         protected override void InitializeInternal()
         {
             var binding = Binding as CheatFloatBinding;
@@ -40,22 +45,22 @@ namespace noio.Cheats
             _slider.onValueChanged.RemoveAllListeners();
             _slider.onValueChanged.AddListener(HandleSliderValueChanged);
 
-            SetLabel();
+            RefreshValueLabel();
         }
 
         void HandleBindingValueChanged()
         {
             _slider.SetValueWithoutNotify(Value);
-            SetLabel();
+            RefreshValueLabel();
         }
 
         void HandleSliderValueChanged(float v)
         {
             Value = v;
-            SetLabel();
+            RefreshValueLabel();
         }
 
-        void SetLabel()
+        void RefreshValueLabel()
         {
             _valueLabel.SetText("{0:0.00}", Value);
         }

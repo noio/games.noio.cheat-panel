@@ -1,4 +1,4 @@
-// (C)2025 @noio_games
+// (C)2026 @noio_games
 // Thomas van den Berg
 
 using System;
@@ -19,10 +19,8 @@ public class CheatPanel : MonoBehaviour
 {
     public static event Action Opened;
     public static event Action Closed;
-    
     const string HomePageTitle = "Home";
     static CheatPanel _instance;
-        
 
     #region SERIALIZED FIELDS
 
@@ -206,7 +204,7 @@ public class CheatPanel : MonoBehaviour
             SortAndAssignHotkeys(page);
         }
 
-        OpenPage(_pages[HomePageTitle]);
+        ShowPage(_pages[HomePageTitle]);
     }
 
     void OnEnable()
@@ -236,9 +234,12 @@ public class CheatPanel : MonoBehaviour
         if (_updateTimer >= 2)
         {
             _updateTimer -= 2;
-            foreach (var binding in _currentPage.Bindings)
+            foreach (var element in _currentPage.Elements)
             {
-                binding.RefreshLabel();
+                if (element.Binding.HasDynamicLabel)
+                {
+                    element.RefreshLabel();
+                }
             }
         }
     }
@@ -270,7 +271,7 @@ public class CheatPanel : MonoBehaviour
 
         if (openPageBinding == null)
         {
-            _homePage.AddStaticBinding(new CheatOpenPageBinding(page.Title, () => OpenPage(page.Title))
+            _homePage.AddStaticBinding(new CheatOpenPageBinding(page.Title, () => ShowPage(page.Title))
             {
                 Category = "_Pages",
                 PreferredHotkeys = preferredHotkeys
@@ -369,15 +370,15 @@ public class CheatPanel : MonoBehaviour
         return page;
     }
 
-    void OpenPage(string pageTitle, bool pushPreviousToStack = true)
+    void ShowPage(string pageTitle, bool pushPreviousToStack = true)
     {
         if (_pages.ContainsKey(pageTitle))
         {
-            OpenPage(_pages[pageTitle], pushPreviousToStack);
+            ShowPage(_pages[pageTitle], pushPreviousToStack);
         }
     }
 
-    void OpenPage(CheatPage page, bool pushPreviousToStack = true)
+    void ShowPage(CheatPage page, bool pushPreviousToStack = true)
     {
         SetPageVisible(_currentPage, false);
 
@@ -388,7 +389,7 @@ public class CheatPanel : MonoBehaviour
 
         _currentPage = page;
 
-        if (page.RefreshPageContentsOnOpen)
+        if (page.RecreatePageContentsOnOpen)
         {
             page.RefreshBindings();
             SortAndAssignHotkeys(page);
@@ -415,12 +416,21 @@ public class CheatPanel : MonoBehaviour
         {
             category.gameObject.SetActive(value);
         }
+
+        if (value)
+        {
+            foreach (var element in page.Elements)
+            {
+                element.RefreshLabel();
+                element.RefreshValue();
+            }
+        }
     }
 
     void CloseCurrentPage()
     {
         var previousPage = _pageStack.Pop();
-        OpenPage(previousPage, false);
+        ShowPage(previousPage, false);
     }
 
     void GoBackToFirstPage()
@@ -483,7 +493,7 @@ public class CheatPanel : MonoBehaviour
                             PreferredHotkeys = cheatAttribute.PreferredHotkeys,
                             Category = category,
                             Subcategory = subcategory,
-                            LabelGetter = labelGetterMethod != null
+                            GetDynamicLabel = labelGetterMethod != null
                                 ? () => labelGetterMethod.Invoke(component, null) as string
                                 : null
                         };
@@ -592,13 +602,13 @@ public class CheatPanel : MonoBehaviour
             switch (binding)
             {
                 case CheatBinding<float> floatBinding:
-                    InstantiateUIElement(_sliderPrefab, floatBinding, page);
+                    page.Elements.Add(InstantiateUIElement(_sliderPrefab, floatBinding, page));
                     break;
                 case CheatBinding<bool> boolBinding:
-                    InstantiateUIElement(_togglePrefab, boolBinding, page);
+                    page.Elements.Add(InstantiateUIElement(_togglePrefab, boolBinding, page));
                     break;
                 case CheatActionBinding actionBinding:
-                    InstantiateUIElement(_buttonPrefab, actionBinding, page);
+                    page.Elements.Add(InstantiateUIElement(_buttonPrefab, actionBinding, page));
                     break;
             }
         }
