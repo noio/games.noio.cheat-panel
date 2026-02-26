@@ -11,6 +11,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace noio.Cheats
@@ -46,7 +47,7 @@ public class CheatPanel : MonoBehaviour
     [SerializeField]
     Mode _initialModeInReleaseBuild = Mode.PermanentlyRemoved;
 
-    [SerializeField] bool _listenToTextInput = true;
+    [FormerlySerializedAs("_listenToTextInput")] [SerializeField] bool _listenToInput = true;
     [SerializeField] string _hotkeys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
     [SerializeField] string _excludedHotkeys = "WASD";
     [SerializeField] GameObject[] _bindToObjects;
@@ -89,13 +90,13 @@ public class CheatPanel : MonoBehaviour
 
     public static bool IsOpen => _instance != null && _instance._mode == Mode.Open;
 
-    public static bool ListenToTextInput
+    public static bool ListenToInput
     {
         get
         {
             if (_instance != null)
             {
-                return _instance._listenToTextInput;
+                return _instance._listenToInput;
             }
 
             Debug.LogWarning("CheatPanel instance not found.");
@@ -105,7 +106,7 @@ public class CheatPanel : MonoBehaviour
         {
             if (_instance != null)
             {
-                _instance._listenToTextInput = value;
+                _instance._listenToInput = value;
             }
             else
             {
@@ -811,7 +812,7 @@ public class CheatPanel : MonoBehaviour
         /*
          * Don't do debug actions in frame one because that could be from CMD+P (play)
          */
-        if (ListenToTextInput &&
+        if (_listenToInput &&
             Application.isFocused &&
             _isQuitting == false &&
             _mode != Mode.Inactive &&
@@ -843,6 +844,10 @@ public class CheatPanel : MonoBehaviour
 
     void HandleActivate(InputAction.CallbackContext ctx)
     {
+        if (_listenToInput == false)
+        {
+            return;
+        }
         if (_mode == Mode.Inactive)
         {
             OncePerFrame(() => { SetMode(Mode.Open); });
@@ -851,6 +856,10 @@ public class CheatPanel : MonoBehaviour
 
     void HandleToggle(InputAction.CallbackContext obj)
     {
+        if (_listenToInput == false)
+        {
+            return;
+        }
         OncePerFrame(() =>
         {
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
