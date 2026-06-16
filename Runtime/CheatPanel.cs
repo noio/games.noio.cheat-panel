@@ -251,6 +251,7 @@ public class CheatPanel : MonoBehaviour
     {
         if (_instance && _instance._mode == Mode.Open)
         {
+            _instance.GoBackToFirstPage();
             _instance.SetMode(Mode.Invisible);
         }
     }
